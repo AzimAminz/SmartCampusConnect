@@ -12,9 +12,9 @@ The system is designed with a modern distributed architecture containing the fol
 
 ```mermaid
 graph TD
-    classDef client fill:#f9f,stroke:#333,stroke-width:2px;
-    classDef server fill:#bbf,stroke:#333,stroke-width:2px;
-    classDef db fill:#fbf,stroke:#333,stroke-width:2px;
+    classDef client fill:#f9f,stroke:black,stroke-width:2px;
+    classDef server fill:#bbf,stroke:black,stroke-width:2px;
+    classDef db fill:#fbf,stroke:black,stroke-width:2px;
 
     Web[🌐 Web Frontend - Vanilla JS SPA]:::client
     Mobile[📱 Mobile Client - Flutter App]:::client
@@ -22,9 +22,9 @@ graph TD
     Backend[☕ Backend API - Spring Boot]:::server
     DB[(🗄️ Database - MySQL 8.0)]:::db
 
-    Web -->|JSON REST API| Backend
-    Mobile -->|JSON REST API| Backend
-    Desktop -->|JSON REST API| Backend
+    Web -->|JSON REST API & SOAP| Backend
+    Mobile -->|JSON REST API & SOAP| Backend
+    Desktop -->|JSON REST API & SOAP| Backend
     Backend -->|Spring Data JPA| DB
 ```
 
@@ -694,4 +694,4 @@ The Desktop Client resides in the `desktop` folder.
 ---
 
 ## 👨‍💻 Development Team
-Created by the **Smart Campus Connect Development Team** for the *Distributed Application Development* course. Feel free to contribute or raise issues!
+Created by the **OMGosh Development Team** for the *Distributed Application Development* course. 
