@@ -2,18 +2,151 @@
   "info": {
     "_postman_id": "1ec82aac-376b-4857-aaf5-221ba1500813",
     "name": "SmartCampusConnect",
+    "description": "SmartCampusConnect API Collection — REST + SOAP\nBase URL: http://localhost:8080/api\nSOAP URL: http://localhost:8085/ws/booking\n\nAuth: Add header X-Auth-Token after login.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
     "_exporter_id": "34054929"
   },
   "item": [
     {
-      "name": "Student API",
+      "name": "🔐 Auth API",
       "item": [
         {
-          "name": "Get All Student (Read All)",
+          "name": "Login (Student)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json", "type": "text" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"B032310001\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "http://localhost:8080/api/auth/login",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8080",
+              "path": ["api", "auth", "login"]
+            },
+            "description": "Login menggunakan no. matrik sahaja (tiada password). Kembalikan token UUID.\nSalin token dan letak dalam header X-Auth-Token untuk request seterusnya."
+          },
+          "response": []
+        },
+        {
+          "name": "Login (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json", "type": "text" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"ADMIN\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "http://localhost:8080/api/auth/login",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8080",
+              "path": ["api", "auth", "login"]
+            },
+            "description": "Login sebagai Admin. userId = ADMIN. Kembalikan token + role ADMIN."
+          },
+          "response": []
+        },
+        {
+          "name": "Who Am I (me)",
           "request": {
             "method": "GET",
-            "header": []
+            "header": [
+              { "key": "X-Auth-Token", "value": "{{auth_token}}", "type": "text" }
+            ],
+            "url": {
+              "raw": "http://localhost:8080/api/auth/me",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8080",
+              "path": ["api", "auth", "me"]
+            },
+            "description": "Semak maklumat pengguna yang sedang login berdasarkan token. Gantikan {{auth_token}} dengan token dari response login."
+          },
+          "response": []
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "X-Auth-Token", "value": "{{auth_token}}", "type": "text" }
+            ],
+            "url": {
+              "raw": "http://localhost:8080/api/auth/logout",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8080",
+              "path": ["api", "auth", "logout"]
+            },
+            "description": "Hapus sesi login. Token tidak lagi sah selepas ini."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "📊 Dashboard API",
+      "item": [
+        {
+          "name": "My Dashboard (Student)",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "X-Auth-Token", "value": "{{auth_token}}", "type": "text" }
+            ],
+            "url": {
+              "raw": "http://localhost:8080/api/dashboard",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8080",
+              "path": ["api", "dashboard"]
+            },
+            "description": "Dapatkan semua data peribadi pelajar: profil, enrolment, tempahan bilik, pinjaman buku, dan notifikasi.\nGunakan token pelajar. Admin akan dapat ringkasan statistik keseluruhan sistem."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "👤 Student API",
+      "item": [
+        {
+          "name": "Get All Students",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8080/api/students",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8080",
+              "path": ["api", "students"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Student By DB Id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8080/api/students/1",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8080",
+              "path": ["api", "students", "1"]
+            }
           },
           "response": []
         },
@@ -23,35 +156,33 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{url}}/students/sid/B032310001",
-              "host": [
-                "{{url}}"
-              ],
-              "path": [
-                "students",
-                "sid",
-                "B032310001"
-              ]
+              "raw": "http://localhost:8080/api/students/sid/B032310001",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8080",
+              "path": ["api", "students", "sid", "B032310001"]
             }
           },
           "response": []
         },
         {
-          "name": "Add New Student (Create)",
+          "name": "Add New Student",
           "request": {
             "method": "POST",
-            "header": [],
+            "header": [
+              { "key": "Content-Type", "value": "application/json", "type": "text" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"studentId\": \"B032310006\",\n  \"name\": \"Amin bin Rosli\",\n  \"email\": \"amin@student.utem.edu.my\",\n  \"programme\": \"Bachelor of Computer Science (Hons)\",\n  \"faculty\": \"FTMK\",\n  \"semester\": \"1\",\n  \"gpa\": 3.60,\n  \"phoneNumber\": \"0123456786\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
             "url": {
               "raw": "http://localhost:8080/api/students",
               "protocol": "http",
-              "host": [
-                "localhost"
-              ],
+              "host": ["localhost"],
               "port": "8080",
-              "path": [
-                "api",
-                "students"
-              ]
+              "path": ["api", "students"]
             }
           },
           "response": []
@@ -60,160 +191,35 @@
           "name": "Update Student By Id",
           "request": {
             "method": "PUT",
-            "header": [],
-            "url": {
-              "raw": "{{url}}/students/1",
-              "host": [
-                "{{url}}"
-              ],
-              "path": [
-                "students",
-                "1"
-              ]
-            }
-          },
-          "response": []
-        }
-      ]
-    },
-    {
-      "name": "Course API",
-      "item": [
-        {
-          "name": "Get All Courses (Read All)",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{url}}/courses",
-              "host": [
-                "{{url}}"
-              ],
-              "path": [
-                "courses"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "Get Course By Code Subject",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{url}}/courses/code/BITP3123",
-              "host": [
-                "{{url}}"
-              ],
-              "path": [
-                "courses",
-                "code",
-                "BITP3123"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "Add New Courses",
-          "request": {
-            "method": "POST",
-            "header": [],
+            "header": [
+              { "key": "Content-Type", "value": "application/json", "type": "text" }
+            ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"courseCode\": \"BITP3132\",\n  \"courseTitle\": \"Mobile App Development\",\n  \"lecturer\": \"Dr. Wan\",\n  \"faculty\": \"FTMK\",\n  \"creditHours\": 3,\n  \"maxCapacity\": 5,\n  \"semester\": \"2024/2025 SEM 2\"\n}\n",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
+              "raw": "{\n  \"name\": \"Muhammad Azim (Updated)\",\n  \"gpa\": 3.90\n}",
+              "options": { "raw": { "language": "json" } }
             },
             "url": {
-              "raw": "{{url}}/courses",
-              "host": [
-                "{{url}}"
-              ],
-              "path": [
-                "courses"
-              ]
-            }
-          },
-          "response": []
-        }
-      ]
-    },
-    {
-      "name": "Enroll Services API",
-      "item": [
-        {
-          "name": "Add New Enrollment",
-          "request": {
-            "method": "POST",
-            "header": [],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"studentId\": 1,\n  \"courseCode\": \"BITP3123\"\n}\n",
-              "options": {
-                "raw": {
-                  "language": "json"
-                }
-              }
-            },
-            "url": {
-              "raw": "{{url}}/enrol",
-              "host": [
-                "{{url}}"
-              ],
-              "path": [
-                "enrol"
-              ]
+              "raw": "http://localhost:8080/api/students/1",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8080",
+              "path": ["api", "students", "1"]
             }
           },
           "response": []
         },
         {
-          "name": "Thread Testing for Enrollment",
-          "request": {
-            "method": "POST",
-            "header": [],
-            "body": {
-              "mode": "raw",
-              "raw": ""
-            },
-            "url": {
-              "raw": "{{url}}/enrol/load-test/BITP3123",
-              "host": [
-                "{{url}}"
-              ],
-              "path": [
-                "enrol",
-                "load-test",
-                "BITP3123"
-              ]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "Drop Subject",
+          "name": "Delete Student By Id",
           "request": {
             "method": "DELETE",
             "header": [],
-            "body": {
-              "mode": "raw",
-              "raw": ""
-            },
             "url": {
-              "raw": "{{url}}/enrol/1/BITP3123",
-              "host": [
-                "{{url}}"
-              ],
-              "path": [
-                "enrol",
-                "1",
-                "BITP3123"
-              ]
+              "raw": "http://localhost:8080/api/students/1",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8080",
+              "path": ["api", "students", "1"]
             }
           },
           "response": []
@@ -221,41 +227,93 @@
       ]
     },
     {
-      "name": "Report API",
+      "name": "📚 Course API",
       "item": [
         {
-          "name": "Statistic For System Dashboard",
+          "name": "Get All Courses",
           "request": {
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{url}}/reporting/stats",
-              "host": [
-                "{{url}}"
-              ],
-              "path": [
-                "reporting",
-                "stats"
-              ]
+              "raw": "http://localhost:8080/api/courses",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8080",
+              "path": ["api", "courses"]
             }
           },
           "response": []
         },
         {
-          "name": "Student Statistic",
+          "name": "Get Course By Code",
           "request": {
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{url}}/reporting/student/B032310001",
-              "host": [
-                "{{url}}"
-              ],
-              "path": [
-                "reporting",
-                "student",
-                "B032310001"
-              ]
+              "raw": "http://localhost:8080/api/courses/code/BITP3123",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8080",
+              "path": ["api", "courses", "code", "BITP3123"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Add New Course",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json", "type": "text" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"courseCode\": \"BITP3132\",\n  \"courseTitle\": \"Cloud Computing\",\n  \"lecturer\": \"Dr. Wan\",\n  \"faculty\": \"FTMK\",\n  \"creditHours\": 3,\n  \"maxCapacity\": 30,\n  \"semester\": \"2024/2025 SEM 1\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "http://localhost:8080/api/courses",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8080",
+              "path": ["api", "courses"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Course By Id",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json", "type": "text" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"maxCapacity\": 40\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "http://localhost:8080/api/courses/1",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8080",
+              "path": ["api", "courses", "1"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Course By Id",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8080/api/courses/1",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8080",
+              "path": ["api", "courses", "1"]
             }
           },
           "response": []
@@ -263,113 +321,315 @@
       ]
     },
     {
-      "name": "Notification API",
+      "name": "📝 Enrolment API (REST + Multithreading R5)",
       "item": [
         {
-          "name": "Get All Notification",
+          "name": "Enrol in Course",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json", "type": "text" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"studentId\": 1,\n  \"courseCode\": \"BITP3123\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "http://localhost:8080/api/enrol",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8080",
+              "path": ["api", "enrol"]
+            },
+            "description": "Daftar seorang pelajar ke dalam satu kursus. Protected by ReentrantLock (R5)."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Enrolments By Student",
           "request": {
             "method": "GET",
-            "header": []
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8080/api/enrol/student/1",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8080",
+              "path": ["api", "enrol", "student", "1"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Enrolments By Course",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8080/api/enrol/course/BITP3123",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8080",
+              "path": ["api", "enrol", "course", "BITP3123"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Drop Course",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8080/api/enrol/1/BITP3123",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8080",
+              "path": ["api", "enrol", "1", "BITP3123"]
+            },
+            "description": "Format: /api/enrol/{studentDbId}/{courseCode}"
+          },
+          "response": []
+        },
+        {
+          "name": "🧵 Load Test — Multithreading Demo (R5)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": { "mode": "raw", "raw": "" },
+            "url": {
+              "raw": "http://localhost:8080/api/enrol/load-test/BITP3123",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8080",
+              "path": ["api", "enrol", "load-test", "BITP3123"]
+            },
+            "description": "Demo R5 Multithreading: Set kursus ke 3 kerusi, kemudian lepaskan 10 thread serentak. Expected: 3 berjaya, 7 ditolak. Membuktikan ReentrantLock (race condition protection) berfungsi."
           },
           "response": []
         }
       ]
     },
     {
-      "name": "Booking Services SOAP",
+      "name": "📈 Reporting API (Service Composition R4)",
       "item": [
         {
-          "name": "Book Room",
+          "name": "System Stats Dashboard",
           "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "text/xml",
-                "type": "text"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "<soapenv:Envelope xmlns:soapenv=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:ser=\"http://service.smartcampus/\">\n   <soapenv:Header/>\n   <soapenv:Body>\n      <ser:bookRoom>\n         <studentId>B032310001</studentId>\n         <studentName>Ahmad Bin Ali</studentName>\n         <roomName>DKG4</roomName>\n         <slot>10:00-12:00</slot>\n         <date>2026-06-01</date>\n         <purpose>Kajian Kumpulan Teragih</purpose>\n      </ser:bookRoom>\n   </soapenv:Body>\n</soapenv:Envelope>\n",
-              "options": {
-                "raw": {
-                  "language": "xml"
-                }
-              }
-            },
+            "method": "GET",
+            "header": [],
             "url": {
-              "raw": "http://localhost:8085/ws/booking",
+              "raw": "http://localhost:8080/api/reporting/stats",
               "protocol": "http",
-              "host": [
-                "localhost"
-              ],
-              "port": "8085",
-              "path": [
-                "ws",
-                "booking"
-              ]
+              "host": ["localhost"],
+              "port": "8080",
+              "path": ["api", "reporting", "stats"]
+            },
+            "description": "R4 Service Composition: Gabungkan data dari semua servis (Student + Course + Enrolment + Notification) dalam satu response."
+          },
+          "response": []
+        },
+        {
+          "name": "Enrolments Per Course",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8080/api/reporting/enrolments-per-course",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8080",
+              "path": ["api", "reporting", "enrolments-per-course"]
             }
           },
           "response": []
         },
         {
-          "name": "Check Availability",
+          "name": "Student Full Profile Report",
           "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "text/xml",
-                "type": "text"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "<soapenv:Envelope xmlns:soapenv=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:ser=\"http://service.smartcampus/\">\n   <soapenv:Header/>\n   <soapenv:Body>\n      <ser:checkAvailability>\n         <roomName>DKG4</roomName>\n         <slot>10:00-12:00</slot>\n         <date>2026-06-01</date>\n      </ser:checkAvailability>\n   </soapenv:Body>\n</soapenv:Envelope>\n"
-            },
+            "method": "GET",
+            "header": [],
             "url": {
-              "raw": "http://localhost:8085/ws/booking",
+              "raw": "http://localhost:8080/api/reporting/student/B032310001",
               "protocol": "http",
-              "host": [
-                "localhost"
-              ],
-              "port": "8085",
-              "path": [
-                "ws",
-                "booking"
-              ]
+              "host": ["localhost"],
+              "port": "8080",
+              "path": ["api", "reporting", "student", "B032310001"]
+            },
+            "description": "Gabungkan profil pelajar + enrolment + notifikasi dalam satu response (R4 Composition)."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "🔔 Notification API (TCP Socket R6)",
+      "item": [
+        {
+          "name": "Get All Notifications",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8080/api/notifications",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8080",
+              "path": ["api", "notifications"]
+            },
+            "description": "Lihat semua log notifikasi yang dihantar melalui TCP socket (port 9090)."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Notifications By Recipient",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8080/api/notifications/recipient/B032310001",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8080",
+              "path": ["api", "notifications", "recipient", "B032310001"]
             }
           },
           "response": []
         },
         {
-          "name": "New Request",
+          "name": "Get Notifications By Type",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8080/api/notifications/type/ENROLMENT_SUCCESS",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8080",
+              "path": ["api", "notifications", "type", "ENROLMENT_SUCCESS"]
+            },
+            "description": "Valid types: ENROLMENT_SUCCESS, ENROLMENT_FAILED, ENROLMENT_DROPPED, ROOM_BOOKED, ROOM_CANCELLED, BOOK_BORROWED, BOOK_RETURNED"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "🏢 Booking Services SOAP (R8)",
+      "item": [
+        {
+          "name": "bookRoom — Tempah Bilik",
           "request": {
             "method": "POST",
             "header": [
-              {
-                "key": "Content-Type",
-                "value": "text/xml",
-                "type": "text"
-              }
+              { "key": "Content-Type", "value": "text/xml", "type": "text" }
             ],
             "body": {
               "mode": "raw",
-              "raw": "<soapenv:Envelope xmlns:soapenv=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:ser=\"http://service.smartcampus/\">\n   <soapenv:Header/>\n   <soapenv:Body>\n      <ser:borrowBook>\n         <studentId>B032310001</studentId>\n         <studentName>Ahmad Bin Ali</studentName>\n         <isbn>978-3-16-148410-0</isbn>\n         <title>Introduction to Distributed Systems</title>\n      </ser:borrowBook>\n   </soapenv:Body>\n</soapenv:Envelope>\n"
+              "raw": "<soapenv:Envelope xmlns:soapenv=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:ser=\"http://service.smartcampus/\">\n   <soapenv:Header/>\n   <soapenv:Body>\n      <ser:bookRoom>\n         <studentId>B032310001</studentId>\n         <studentName>Muhammad Azim bin Aminudin</studentName>\n         <roomName>DKG4</roomName>\n         <slot>10:00-12:00</slot>\n         <date>2026-06-01</date>\n         <purpose>Kajian Kumpulan Teragih</purpose>\n      </ser:bookRoom>\n   </soapenv:Body>\n</soapenv:Envelope>",
+              "options": { "raw": { "language": "xml" } }
             },
             "url": {
               "raw": "http://localhost:8085/ws/booking",
               "protocol": "http",
-              "host": [
-                "localhost"
-              ],
+              "host": ["localhost"],
               "port": "8085",
-              "path": [
-                "ws",
-                "booking"
-              ]
-            }
+              "path": ["ws", "booking"]
+            },
+            "description": "SOAP R8: Tempah bilik kuliah. Returns bookingRef (e.g. BK-20260601-XXX).\nSOAP Fault jika bilik + slot + tarikh sudah ditempah."
+          },
+          "response": []
+        },
+        {
+          "name": "checkAvailability — Semak Kekosongan",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "text/xml", "type": "text" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "<soapenv:Envelope xmlns:soapenv=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:ser=\"http://service.smartcampus/\">\n   <soapenv:Header/>\n   <soapenv:Body>\n      <ser:checkAvailability>\n         <roomName>DKG4</roomName>\n         <slot>10:00-12:00</slot>\n         <date>2026-06-01</date>\n      </ser:checkAvailability>\n   </soapenv:Body>\n</soapenv:Envelope>",
+              "options": { "raw": { "language": "xml" } }
+            },
+            "url": {
+              "raw": "http://localhost:8085/ws/booking",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8085",
+              "path": ["ws", "booking"]
+            },
+            "description": "Returns true (available) or false (already booked)."
+          },
+          "response": []
+        },
+        {
+          "name": "cancelBooking — Batalkan Tempahan",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "text/xml", "type": "text" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "<soapenv:Envelope xmlns:soapenv=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:ser=\"http://service.smartcampus/\">\n   <soapenv:Header/>\n   <soapenv:Body>\n      <ser:cancelBooking>\n         <bookingRef>BK-20260601-001</bookingRef>\n      </ser:cancelBooking>\n   </soapenv:Body>\n</soapenv:Envelope>",
+              "options": { "raw": { "language": "xml" } }
+            },
+            "url": {
+              "raw": "http://localhost:8085/ws/booking",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8085",
+              "path": ["ws", "booking"]
+            },
+            "description": "Gantikan bookingRef dengan ref yang diterima dari bookRoom. SOAP Fault jika ref tidak wujud atau sudah dibatalkan."
+          },
+          "response": []
+        },
+        {
+          "name": "borrowBook — Pinjam Buku",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "text/xml", "type": "text" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "<soapenv:Envelope xmlns:soapenv=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:ser=\"http://service.smartcampus/\">\n   <soapenv:Header/>\n   <soapenv:Body>\n      <ser:borrowBook>\n         <studentId>B032310001</studentId>\n         <studentName>Muhammad Azim bin Aminudin</studentName>\n         <isbn>978-3-16-148410-0</isbn>\n         <title>Introduction to Distributed Systems</title>\n      </ser:borrowBook>\n   </soapenv:Body>\n</soapenv:Envelope>",
+              "options": { "raw": { "language": "xml" } }
+            },
+            "url": {
+              "raw": "http://localhost:8085/ws/booking",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8085",
+              "path": ["ws", "booking"]
+            },
+            "description": "Returns loanRef (e.g. LN-20260525-XXX). Tempoh pinjaman 14 hari."
+          },
+          "response": []
+        },
+        {
+          "name": "returnBook — Pulangkan Buku (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "text/xml", "type": "text" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "<soapenv:Envelope xmlns:soapenv=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:ser=\"http://service.smartcampus/\">\n   <soapenv:Header/>\n   <soapenv:Body>\n      <ser:returnBook>\n         <loanRef>LN-20260525-001</loanRef>\n      </ser:returnBook>\n   </soapenv:Body>\n</soapenv:Envelope>",
+              "options": { "raw": { "language": "xml" } }
+            },
+            "url": {
+              "raw": "http://localhost:8085/ws/booking",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8085",
+              "path": ["ws", "booking"]
+            },
+            "description": "Admin sahkan pemulangan buku. Kira denda jika lambat (RM1/hari). Gantikan loanRef dengan ref dari borrowBook."
           },
           "response": []
         }
@@ -382,10 +642,7 @@
       "script": {
         "type": "text/javascript",
         "packages": {},
-        "requests": {},
-        "exec": [
-          ""
-        ]
+        "exec": [""]
       }
     },
     {
@@ -393,17 +650,26 @@
       "script": {
         "type": "text/javascript",
         "packages": {},
-        "requests": {},
-        "exec": [
-          ""
-        ]
+        "exec": [""]
       }
     }
   ],
   "variable": [
     {
-      "key": "url",
-      "value": ""
+      "key": "base_url",
+      "value": "http://localhost:8080/api",
+      "type": "string"
+    },
+    {
+      "key": "soap_url",
+      "value": "http://localhost:8085/ws/booking",
+      "type": "string"
+    },
+    {
+      "key": "auth_token",
+      "value": "",
+      "description": "Paste token dari response /api/auth/login di sini",
+      "type": "string"
     }
   ]
 }

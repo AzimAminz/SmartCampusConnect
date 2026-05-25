@@ -11,10 +11,11 @@
 -- when the Spring Boot backend starts (ddl-auto=update).
 --
 -- Services & their tables:
---   1. Student Profile Service  → students
---   2. Course Enrolment Service → courses, enrolments
---   3. Library/Booking Service  → room_bookings, book_loans  (also exposed via SOAP)
---   4. Notification Service     → notifications  (populated by TCP socket events)
+--   1. Auth Service              → users, user_sessions
+--   2. Student Profile Service   → students
+--   3. Course Enrolment Service  → courses, enrolments
+--   4. Library/Booking Service   → room_bookings, book_loans  (exposed via SOAP)
+--   5. Notification Service      → notifications  (populated by TCP socket events)
 -- =========================================================================
 
 CREATE DATABASE IF NOT EXISTS `smartcampus`
@@ -24,7 +25,46 @@ CREATE DATABASE IF NOT EXISTS `smartcampus`
 USE `smartcampus`;
 
 -- =========================================================================
--- TABLE 1: students
+-- TABLE 1: users
+-- Service  : Auth Service
+-- Protocol : REST (POST /api/auth/login, GET /api/auth/me, POST /api/auth/logout)
+-- NOTE     : No password required. Login is done using userId only.
+--            Pelajar  → userId = matric number (e.g. B032310001)
+--            Admin    → userId = "ADMIN"
+-- =========================================================================
+CREATE TABLE IF NOT EXISTS `users` (
+    `id`          BIGINT       NOT NULL AUTO_INCREMENT,
+    `user_id`     VARCHAR(20)  NOT NULL COMMENT 'Matric number or ADMIN',
+    `role`        ENUM('STUDENT','ADMIN') NOT NULL DEFAULT 'STUDENT',
+    `full_name`   VARCHAR(100) DEFAULT NULL,
+    `created_at`  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uq_users_user_id` (`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  COMMENT='Auth Service - user accounts (no password, login by userId only)';
+
+-- =========================================================================
+-- TABLE 2: user_sessions
+-- Service  : Auth Service
+-- Protocol : REST (via X-Auth-Token header)
+-- NOTE     : Token is a UUID string. Expires after 24 hours.
+-- =========================================================================
+CREATE TABLE IF NOT EXISTS `user_sessions` (
+    `id`          BIGINT       NOT NULL AUTO_INCREMENT,
+    `token`       VARCHAR(100) NOT NULL COMMENT 'UUID token returned after login',
+    `user_id`     VARCHAR(20)  NOT NULL COMMENT 'Matric number or ADMIN',
+    `role`        ENUM('STUDENT','ADMIN') NOT NULL,
+    `full_name`   VARCHAR(100) DEFAULT NULL,
+    `created_at`  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `expires_at`  DATETIME     NOT NULL DEFAULT (CURRENT_TIMESTAMP + INTERVAL 24 HOUR),
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uq_user_sessions_token` (`token`),
+    KEY `idx_user_sessions_user_id` (`user_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  COMMENT='Auth Service - active login sessions with expiry tracking';
+
+-- =========================================================================
+-- TABLE 3: students
 -- Service  : Student Profile Service
 -- Protocol : REST  (GET/POST/PUT/DELETE /api/students)
 -- =========================================================================
@@ -47,7 +87,7 @@ CREATE TABLE IF NOT EXISTS `students` (
   COMMENT='Student Profile Service - stores student demographic and academic data';
 
 -- =========================================================================
--- TABLE 2: courses
+-- TABLE 4: courses
 -- Service  : Course Enrolment Service
 -- Protocol : REST  (GET/POST /api/courses)
 -- R5 NOTE  : current_capacity is the SHARED MUTABLE STATE protected by
@@ -70,10 +110,11 @@ CREATE TABLE IF NOT EXISTS `courses` (
   COMMENT='Course Enrolment Service - course catalog with capacity management';
 
 -- =========================================================================
--- TABLE 3: enrolments
+-- TABLE 5: enrolments
 -- Service  : Course Enrolment Service
 -- Protocol : REST  (POST /api/enrol, GET /api/enrol/{studentId}, DELETE /api/enrol/{id})
 -- R4 NOTE  : Enrolment triggers async notification event (choreography)
+-- R5 NOTE  : Concurrent enrolment protected by ReentrantLock
 -- =========================================================================
 CREATE TABLE IF NOT EXISTS `enrolments` (
     `id`            BIGINT       NOT NULL AUTO_INCREMENT,
@@ -92,11 +133,12 @@ CREATE TABLE IF NOT EXISTS `enrolments` (
   COMMENT='Enrolments junction table - links students to courses with status tracking';
 
 -- =========================================================================
--- TABLE 4: room_bookings
+-- TABLE 6: room_bookings
 -- Service  : Library / Booking Service (LEGACY SYSTEM SIMULATION)
 -- Protocol : SOAP/WSDL  (http://localhost:8085/ws/booking)
--- R8 NOTE  : Managed by JAX-WS RoomBookingSoapService. SOAP Fault is triggered
---            when a duplicate (room_name + slot + booking_date) is attempted.
+-- R8 NOTE  : Managed by JAX-WS CampusBookingSoapService.
+--            Operations: bookRoom, cancelBooking, checkAvailability
+--            SOAP Fault triggered on duplicate (room_name + slot + booking_date).
 -- =========================================================================
 CREATE TABLE IF NOT EXISTS `room_bookings` (
     `id`                BIGINT      NOT NULL AUTO_INCREMENT,
@@ -119,9 +161,10 @@ CREATE TABLE IF NOT EXISTS `room_bookings` (
   COMMENT='Library/Booking Service - discussion room bookings via SOAP (R8)';
 
 -- =========================================================================
--- TABLE 5: book_loans
+-- TABLE 7: book_loans
 -- Service  : Library / Booking Service
 -- Protocol : SOAP/WSDL  (operations: borrowBook, returnBook)
+-- R8 NOTE  : Admin confirms return via SOAP returnBook operation.
 -- =========================================================================
 CREATE TABLE IF NOT EXISTS `book_loans` (
     `id`              BIGINT       NOT NULL AUTO_INCREMENT,
@@ -145,7 +188,7 @@ CREATE TABLE IF NOT EXISTS `book_loans` (
   COMMENT='Library/Booking Service - book loan records with overdue and fine tracking';
 
 -- =========================================================================
--- TABLE 6: notifications
+-- TABLE 8: notifications
 -- Service  : Notification Service
 -- Protocol : Internal TCP Socket (port 9090) — NOT exposed via HTTP
 -- R6 NOTE  : This table logs every event pushed by the TCP Producer services.
@@ -185,18 +228,27 @@ CREATE TABLE IF NOT EXISTS `notifications` (
 -- Hibernate auto-creates tables; this provides initial demo records.
 -- =========================================================================
 
+-- Auth Users
+INSERT IGNORE INTO `users` (`user_id`, `role`, `full_name`) VALUES
+('ADMIN',       'ADMIN',   'System Administrator'),
+('B032310001',  'STUDENT', 'Muhammad Azim bin Aminudin'),
+('B032310002',  'STUDENT', 'Nur Aisyah binti Ahmad'),
+('B032310003',  'STUDENT', 'Muhammad Hafiz bin Razali'),
+('B032310004',  'STUDENT', 'Siti Nurhaliza binti Zainal'),
+('B032310005',  'STUDENT', 'Ahmad Faris bin Othman');
+
 -- Sample Students
 INSERT IGNORE INTO `students` (`student_id`, `name`, `email`, `programme`, `faculty`, `semester`, `gpa`, `phone_number`) VALUES
-('B032310001', 'Muhammad Azim bin Aminudin',    'azim@student.utem.edu.my',   'Bachelor of Computer Science',       'FTMK', '3', 3.75, '0123456789'),
-('B032310002', 'Nur Aina binti Razak',   'aina@student.utem.edu.my',   'Bachelor of Information Technology', 'FTMK', '3', 3.60, '0129876543'),
-('B032310003', 'Muhammad Haziq bin Ali', 'haziq@student.utem.edu.my',  'Bachelor of Software Engineering',   'FTMK', '2', 3.85, '0112345678'),
-('B032310004', 'Siti Nabilah binti Yusof','nabilah@student.utem.edu.my','Bachelor of Computer Science',      'FTMK', '4', 3.20, '0135559876'),
-('B032310005', 'Danish Ariff bin Omar',  'danish@student.utem.edu.my', 'Bachelor of Information Technology', 'FTMK', '1', 3.50, '0147771234');
+('B032310001', 'Muhammad Azim bin Aminudin',  'azim@student.utem.edu.my',     'Bachelor of Computer Science (Hons)', 'FTMK', '1', 3.80, '0123456781'),
+('B032310002', 'Nur Aisyah binti Ahmad',      'aisyah@student.utem.edu.my',   'Bachelor of Computer Science (Hons)', 'FTMK', '1', 3.65, '0123456782'),
+('B032310003', 'Muhammad Hafiz bin Razali',   'hafiz@student.utem.edu.my',    'Bachelor of Computer Science (Hons)', 'FTMK', '1', 3.72, '0123456783'),
+('B032310004', 'Siti Nurhaliza binti Zainal', 'nurhaliza@student.utem.edu.my','Bachelor of Computer Science (Hons)', 'FTMK', '1', 3.55, '0123456784'),
+('B032310005', 'Ahmad Faris bin Othman',      'faris@student.utem.edu.my',    'Bachelor of Computer Science (Hons)', 'FTMK', '1', 3.90, '0123456785');
 
 -- Sample Courses
 INSERT IGNORE INTO `courses` (`course_code`, `course_title`, `lecturer`, `faculty`, `credit_hours`, `current_capacity`, `max_capacity`, `semester`) VALUES
-('BITP3123', 'Distributed Application Development',   'Dr. Razif Razali',    'FTMK', 3, 0, 5,  '2024/2025 SEM 2'),
-('BITP3143', 'Mobile Application Development',        'Dr. Norzaimah Zainol', 'FTMK', 3, 0, 30, '2024/2025 SEM 2'),
-('BITM3073', 'Information Security',                  'Dr. Azhar Ahmad',     'FTMK', 3, 0, 30, '2024/2025 SEM 2'),
-('BITU3033', 'Technopreneurship',                     'Dr. Shahril Rizal',   'FTMK', 2, 0, 40, '2024/2025 SEM 2'),
-('BITP3113', 'Advanced Web Technologies',             'Dr. Munirah Mohd',    'FTMK', 3, 0, 30, '2024/2025 SEM 2');
+('BITP3123', 'Distributed Application Development', 'Dr. Ramli',       'FTMK', 3, 0, 30, '2024/2025 SEM 1'),
+('BITP3143', 'Mobile Application Development',      'Dr. Farahwahida', 'FTMK', 3, 0, 30, '2024/2025 SEM 1'),
+('BITM3073', 'Network Security',                    'Dr. Azuan',       'FTMK', 3, 0, 25, '2024/2025 SEM 1'),
+('BITU3033', 'Software Engineering',                'Dr. Ruzaini',     'FTMK', 3, 0, 35, '2024/2025 SEM 1'),
+('BITP3113', 'Web Application Development',         'Dr. Shahrol',     'FTMK', 3, 0, 30, '2024/2025 SEM 1');

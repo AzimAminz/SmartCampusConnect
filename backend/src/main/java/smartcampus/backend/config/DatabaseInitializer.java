@@ -5,8 +5,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import smartcampus.backend.model.Course;
 import smartcampus.backend.model.Student;
+import smartcampus.backend.model.User;
 import smartcampus.backend.repository.CourseRepository;
 import smartcampus.backend.repository.StudentRepository;
+import smartcampus.backend.repository.UserRepository;
 
 /**
  * Seeds sample data into the database on first startup.
@@ -18,11 +20,13 @@ public class DatabaseInitializer {
 
     @Autowired private StudentRepository studentRepository;
     @Autowired private CourseRepository courseRepository;
+    @Autowired private UserRepository userRepository;
 
     @PostConstruct
     public void seed() {
         seedStudents();
         seedCourses();
+        seedUsers();  // Must run AFTER seedStudents so names are available
     }
 
     private void seedStudents() {
@@ -80,5 +84,30 @@ public class DatabaseInitializer {
                 "Dr. Shahrol", "FTMK", 3, 30, "2024/2025 SEM 1"));
 
         System.out.println("✅ [DB-INIT] Seeded 5 sample courses");
+    }
+
+    /**
+     * Seeds the users table:
+     *   - 1 ADMIN account (userId = "ADMIN")
+     *   - 1 STUDENT account per seeded student (userId = matric no.)
+     *
+     * These accounts are used by the /api/auth/login endpoint.
+     * No password required — login by userId only.
+     */
+    private void seedUsers() {
+        if (userRepository.count() > 0) return;
+
+        // Admin account
+        userRepository.save(new User("ADMIN", User.Role.ADMIN, "System Administrator"));
+
+        // Sync student accounts from students table
+        studentRepository.findAll().forEach(student ->
+            userRepository.save(new User(
+                    student.getStudentId(),
+                    User.Role.STUDENT,
+                    student.getName()))
+        );
+
+        System.out.println("✅ [DB-INIT] Seeded users: 1 admin + " + studentRepository.count() + " students");
     }
 }

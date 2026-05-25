@@ -63,6 +63,66 @@ This section lists **all available API endpoints** exposed by the SmartCampus Co
 
 ---
 
+### 🔐 Auth Service (REST)
+**Base URL**: `http://localhost:8080/api/auth`
+
+Sistem login menggunakan **ID sahaja — tiada password diperlukan**.
+- Pelajar login menggunakan **no. matrik** (cth: `B032310001`)
+- Admin login menggunakan ID tetap **`ADMIN`**
+
+Token UUID diterima selepas login. Gunakan token ini sebagai header `X-Auth-Token` untuk semua request yang memerlukan pengesahan.
+
+| Method | Endpoint | Description | Response |
+| :--- | :--- | :--- | :--- |
+| `POST` | `/api/auth/login` | Login dengan userId (matrik atau ADMIN) | `200 OK` — token, role, nama |
+| `GET` | `/api/auth/me` | Semak siapa yang sedang login | `200 OK` atau `401 Unauthorized` |
+| `POST` | `/api/auth/logout` | Logout dan hapus sesi | `200 OK` |
+
+**Contoh `POST /api/auth/login` Request Body (Pelajar):**
+```json
+{ "userId": "B032310001" }
+```
+
+**Contoh `POST /api/auth/login` Request Body (Admin):**
+```json
+{ "userId": "ADMIN" }
+```
+
+**Contoh Response Berjaya:**
+```json
+{
+  "token": "550e8400-e29b-41d4-a716-446655440000",
+  "userId": "B032310001",
+  "role": "STUDENT",
+  "fullName": "Muhammad Azim bin Aminudin",
+  "expiresAt": "2026-05-26T22:49:38",
+  "message": "Login successful. Welcome, Muhammad Azim bin Aminudin!"
+}
+```
+
+> [!NOTE]
+> Sertakan token di header setiap request yang memerlukan login:
+> ```
+> X-Auth-Token: 550e8400-e29b-41d4-a716-446655440000
+> ```
+
+---
+
+### 📊 Dashboard Service (REST)
+**Base URL**: `http://localhost:8080/api/dashboard`
+
+| Method | Endpoint | Description | Response |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/api/dashboard` | Lihat semua data peribadi (pelajar) atau statistik sistem (admin) | `200 OK` |
+
+Pelajar akan menerima: **profil + enrolment aktif + tempahan bilik + pinjaman buku + notifikasi**.
+Admin akan menerima: **ringkasan statistik + semua pinjaman + semua tempahan**.
+
+> [!IMPORTANT]
+> Endpoint ini memerlukan header `X-Auth-Token`. Login dahulu untuk dapatkan token.
+
+---
+
 ### 👤 Student Profile Service (REST)
 **Base URL**: `http://localhost:8080/api/students`
 
@@ -74,13 +134,17 @@ This section lists **all available API endpoints** exposed by the SmartCampus Co
 | `PUT` | `/api/students/{id}` | Update an existing student's info | `200 OK` or `404 Not Found` |
 | `DELETE` | `/api/students/{id}` | Remove a student record | `204 No Content` or `404 Not Found` |
 
-**Example `POST /api/students` Request Body:**
+**Contoh `POST /api/students` Request Body:**
 ```json
 {
+  "studentId": "B032310006",
   "name": "Ahmad Azim",
   "email": "azim@student.utem.edu.my",
-  "programme": "Computer Science",
-  "gpa": 3.75
+  "programme": "Bachelor of Computer Science (Hons)",
+  "faculty": "FTMK",
+  "semester": "1",
+  "gpa": 3.75,
+  "phoneNumber": "0123456789"
 }
 ```
 
@@ -92,12 +156,16 @@ This section lists **all available API endpoints** exposed by the SmartCampus Co
 | Method | Endpoint | Description | Response |
 | :--- | :--- | :--- | :--- |
 | `GET` | `/api/courses` | Get all available courses | `200 OK` — JSON Array |
-| `GET` | `/api/courses/{code}` | Get a specific course by code | `200 OK` or `404 Not Found` |
+| `GET` | `/api/courses/{id}` | Get course by database ID | `200 OK` or `404 Not Found` |
+| `GET` | `/api/courses/code/{courseCode}` | Get course by course code | `200 OK` or `404 Not Found` |
 | `POST` | `/api/courses` | Create a new course | `201 Created` |
-| `POST` | `/api/enrol` | Enrol a student into a course (checks capacity) | `200 OK`, `400 Bad Request` (full), or `404 Not Found` |
-| `GET` | `/api/enrol/{studentId}` | List all courses a student is enrolled in | `200 OK` |
-| `DELETE` | `/api/enrol/{enrolmentId}` | Drop a student from a course | `204 No Content` |
-| `POST` | `/api/enrol/load-test` | Simulate 10 concurrent enrolments (R5 Demo) | `200 OK` with thread results |
+| `PUT` | `/api/courses/{id}` | Update course info | `200 OK` or `404 Not Found` |
+| `DELETE` | `/api/courses/{id}` | Delete a course | `200 OK` or `404 Not Found` |
+| `POST` | `/api/enrol` | Enrol a student into a course | `201 Created` or `400 Bad Request` |
+| `GET` | `/api/enrol/student/{studentId}` | List all enrolments for a student | `200 OK` |
+| `GET` | `/api/enrol/course/{courseCode}` | List all students enrolled in a course | `200 OK` |
+| `DELETE` | `/api/enrol/{studentId}/{courseCode}` | Drop a student from a course | `200 OK` |
+| `POST` | `/api/enrol/load-test/{courseCode}` | Simulate 10 concurrent enrolments (R5 Demo) | `200 OK` with thread results |
 
 **Example `POST /api/enrol` Request Body:**
 ```json
@@ -160,13 +228,15 @@ Whenever a successful enrolment or room booking occurs, the backend services act
 **SOAP Endpoint URL**: `http://localhost:8085/ws/booking`  
 **WSDL Auto-generated at**: `http://localhost:8085/ws/booking?wsdl`
 
-This service simulates integration with a **legacy campus booking system** using **JAX-WS SOAP over HTTP**, as required by the BITP3123 coursework specification.
+This service simulates integration with a **legacy campus booking system** using **JAX-WS SOAP over HTTP**.
 
-| Operation | Method Name | Input Parameters | Return | SOAP Fault Triggered When |
+| Operation | Method Name | Input Parameters | Return | SOAP Fault |
 | :--- | :--- | :--- | :--- | :--- |
-| Book a Discussion Room | `bookRoom` | `studentId` (String), `roomName` (String), `slot` (String) | Confirmation message (String) | Room slot is already reserved |
-| Check Room Availability | `checkAvailability` | `roomName` (String), `slot` (String) | `true` or `false` (boolean) | Invalid room name |
-| Cancel a Booking | `cancelBooking` | `bookingId` (String) | Confirmation message (String) | Booking ID does not exist |
+| Tempah Bilik | `bookRoom` | `studentId`, `studentName`, `roomName`, `slot`, `date` (yyyy-MM-dd), `purpose` | Booking reference string | Bilik + slot + tarikh sudah ditempah |
+| Semak Kekosongan | `checkAvailability` | `roomName`, `slot`, `date` | `true` (tersedia) atau `false` | — |
+| Batalkan Tempahan | `cancelBooking` | `bookingRef` | `true` | Ref tidak wujud atau sudah dibatalkan |
+| Pinjam Buku | `borrowBook` | `studentId`, `studentName`, `isbn`, `title` | Loan reference string | Buku sudah dipinjam oleh pelajar sama |
+| Pulangkan Buku (Admin) | `returnBook` | `loanRef` | `true` | Ref tidak wujud atau sudah dipulangkan |
 
 **How to test using cURL:**
 ```bash
