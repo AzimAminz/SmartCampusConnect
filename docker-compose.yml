@@ -1,0 +1,94 @@
+version: '3.8'
+
+services:
+  # MySQL Database Service
+  mysql-db:
+    image: mysql:8.0
+    container_name: smartcampus-mysql
+    restart: always
+    ports:
+      - "${FORWARD_DB_PORT:-3306}:3306"
+    environment:
+      MYSQL_DATABASE: "${DB_DATABASE:-smartcampus}"
+      MYSQL_ROOT_PASSWORD: "${DB_PASSWORD}"
+      MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - smartcampus-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Spring Boot Backend API Service (Sesuai untuk semua orang - TIADA JAVA DIPERLUKAN)
+#   backend-api:
+#     build:
+#       context: ./backend
+#       dockerfile: Dockerfile
+#     container_name: smartcampus-backend
+#     restart: always
+#     ports:
+#       - "${FORWARD_API_PORT:-8080}:8080"
+#     environment:
+#       SPRING_DATASOURCE_URL: "jdbc:mysql://mysql-db:3306/${DB_DATABASE:-smartcampus}?createDatabaseIfNotExist=true&allowPublicKeyRetrieval=true&useSSL=false"
+#       SPRING_DATASOURCE_USERNAME: "${DB_USERNAME:-smartcampus_user}"
+#       SPRING_DATASOURCE_PASSWORD: "${DB_PASSWORD:-smartcampus_pwd}"
+#       SPRING_JPA_HIBERNATE_DDL_AUTO: "update"
+#       SPRING_JPA_SHOW_SQL: "true"
+#       SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT: "org.hibernate.dialect.MySQLDialect"
+#     depends_on:
+#       mysql-db:
+#         condition: service_healthy
+#     networks:
+#       - smartcampus-network
+
+  # Nginx Web Frontend Service
+  web-frontend:
+    image: nginx:alpine
+    container_name: smartcampus-web
+    restart: always
+    ports:
+      - "${FORWARD_WEB_PORT:-3000}:80"
+    volumes:
+      - ./web:/usr/share/nginx/html
+    depends_on:
+      - backend-api
+    networks:
+      - smartcampus-network
+
+# 🛠️ NAK HOT-RELOADING JAVA? Sila aktifkan blok di bawah dan padam/comment blok "backend-api" di atas.
+ backend-api:
+   image: maven:3.8.5-openjdk-17
+   container_name: smartcampus-backend
+   restart: always
+   ports:
+     - "${FORWARD_API_PORT:-8080}:8080"
+   working_dir: /app
+   volumes:
+     - ./backend:/app
+     - maven_cache:/root/.m2
+   command: ./mvnw spring-boot:run
+   environment:
+     SPRING_DATASOURCE_URL: "jdbc:mysql://mysql-db:3306/${DB_DATABASE:-smartcampus}?createDatabaseIfNotExist=true&allowPublicKeyRetrieval=true&useSSL=false"
+     SPRING_DATASOURCE_USERNAME: "${DB_USERNAME:-smartcampus_user}"
+     SPRING_DATASOURCE_PASSWORD: "${DB_PASSWORD:-smartcampus_pwd}"
+     SPRING_JPA_HIBERNATE_DDL_AUTO: "update"
+     SPRING_JPA_SHOW_SQL: "true"
+     SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT: "org.hibernate.dialect.MySQLDialect"
+   depends_on:
+     mysql-db:
+       condition: service_healthy
+   networks:
+     - smartcampus-network
+
+networks:
+  smartcampus-network:
+    driver: bridge
+
+volumes:
+  mysql_data:
+    driver: local
+  maven_cache:
+    driver: local
