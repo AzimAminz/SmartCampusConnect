@@ -13,8 +13,7 @@ import smartcampus.backend.repository.RoomBookingRepository;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
-import java.util.List;
-import java.util.stream.Collectors;
+
 
 /**
  * SOAP Web Service — satisfies R8 (SOAP/WSDL).

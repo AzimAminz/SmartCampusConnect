@@ -4,7 +4,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import smartcampus.backend.model.Course;
-import smartcampus.backend.model.Student;
 import smartcampus.backend.repository.CourseRepository;
 import smartcampus.backend.repository.EnrolmentRepository;
 import smartcampus.backend.repository.NotificationRepository;
