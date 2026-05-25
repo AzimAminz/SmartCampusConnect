@@ -1,7 +1,9 @@
 version: '3.8'
 
 services:
-  # MySQL Database Service
+  # =========================================================================
+  # 🗄️ MySQL Database Service
+  # =========================================================================
   mysql-db:
     image: mysql:8.0
     container_name: smartcampus-mysql
@@ -22,29 +24,49 @@ services:
       timeout: 5s
       retries: 5
 
-  # Spring Boot Backend API Service (Sesuai untuk semua orang - TIADA JAVA DIPERLUKAN)
-#   backend-api:
-#     build:
-#       context: ./backend
-#       dockerfile: Dockerfile
-#     container_name: smartcampus-backend
-#     restart: always
-#     ports:
-#       - "${FORWARD_API_PORT:-8080}:8080"
-#     environment:
-#       SPRING_DATASOURCE_URL: "jdbc:mysql://mysql-db:3306/${DB_DATABASE:-smartcampus}?createDatabaseIfNotExist=true&allowPublicKeyRetrieval=true&useSSL=false"
-#       SPRING_DATASOURCE_USERNAME: "${DB_USERNAME:-smartcampus_user}"
-#       SPRING_DATASOURCE_PASSWORD: "${DB_PASSWORD:-smartcampus_pwd}"
-#       SPRING_JPA_HIBERNATE_DDL_AUTO: "update"
-#       SPRING_JPA_SHOW_SQL: "true"
-#       SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT: "org.hibernate.dialect.MySQLDialect"
-#     depends_on:
-#       mysql-db:
-#         condition: service_healthy
-#     networks:
-#       - smartcampus-network
+  # =========================================================================
+  # ☕ Spring Boot Backend API Service
+  #
+  # Exposes three ports:
+  #   - 8080 : REST API (Spring Boot HTTP server)
+  #   - 8085 : SOAP/WSDL Endpoint (JAX-WS, published via jakarta.xml.ws.Endpoint)
+  #   - 9090 : Notification TCP Socket Server (Producer-Consumer messaging - R6)
+  #
+  # Uses the Maven wrapper (./mvnw) so NO local Java installation is required.
+  # =========================================================================
+  backend-api:
+    image: maven:3.8.5-openjdk-17
+    container_name: smartcampus-backend
+    restart: always
+    ports:
+      - "${FORWARD_API_PORT:-8080}:8080"        # REST API
+      - "${FORWARD_SOAP_PORT:-8085}:8085"       # SOAP/WSDL Legacy Booking Service 
+      - "${FORWARD_NOTIFY_PORT:-9090}:9090"     # TCP Socket Notification Server 
+    working_dir: /app
+    volumes:
+      - ./backend:/app
+      - maven_cache:/root/.m2
+    command: ./mvnw spring-boot:run
+    environment:
+      SPRING_DATASOURCE_URL: "jdbc:mysql://mysql-db:3306/${DB_DATABASE:-smartcampus}?createDatabaseIfNotExist=true&allowPublicKeyRetrieval=true&useSSL=false"
+      SPRING_DATASOURCE_USERNAME: "${DB_USERNAME:-root}"
+      SPRING_DATASOURCE_PASSWORD: "${DB_PASSWORD:-}"
+      SPRING_JPA_HIBERNATE_DDL_AUTO: "update"
+      SPRING_JPA_SHOW_SQL: "true"
+      SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT: "org.hibernate.dialect.MySQLDialect"
+      # Custom port bindings passed as JVM env (optional override)
+      SOAP_SERVER_PORT: "${FORWARD_SOAP_PORT:-8085}"
+      NOTIFY_SERVER_PORT: "${FORWARD_NOTIFY_PORT:-9090}"
+    depends_on:
+      mysql-db:
+        condition: service_healthy
+    networks:
+      - smartcampus-network
 
-  # Nginx Web Frontend Service
+  # =========================================================================
+  # 🌐 Nginx Web Frontend Service
+  # Serves the vanilla HTML/CSS/JS SPA on port 3000
+  # =========================================================================
   web-frontend:
     image: nginx:alpine
     container_name: smartcampus-web
@@ -57,31 +79,6 @@ services:
       - backend-api
     networks:
       - smartcampus-network
-
-# 🛠️ NAK HOT-RELOADING JAVA? Sila aktifkan blok di bawah dan padam/comment blok "backend-api" di atas.
- backend-api:
-   image: maven:3.8.5-openjdk-17
-   container_name: smartcampus-backend
-   restart: always
-   ports:
-     - "${FORWARD_API_PORT:-8080}:8080"
-   working_dir: /app
-   volumes:
-     - ./backend:/app
-     - maven_cache:/root/.m2
-   command: ./mvnw spring-boot:run
-   environment:
-     SPRING_DATASOURCE_URL: "jdbc:mysql://mysql-db:3306/${DB_DATABASE:-smartcampus}?createDatabaseIfNotExist=true&allowPublicKeyRetrieval=true&useSSL=false"
-     SPRING_DATASOURCE_USERNAME: "${DB_USERNAME:-smartcampus_user}"
-     SPRING_DATASOURCE_PASSWORD: "${DB_PASSWORD:-smartcampus_pwd}"
-     SPRING_JPA_HIBERNATE_DDL_AUTO: "update"
-     SPRING_JPA_SHOW_SQL: "true"
-     SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT: "org.hibernate.dialect.MySQLDialect"
-   depends_on:
-     mysql-db:
-       condition: service_healthy
-   networks:
-     - smartcampus-network
 
 networks:
   smartcampus-network:

@@ -55,6 +55,167 @@ This system is designed specifically to fulfill all **10 Technical Requirements 
 
 ---
 
+## 🌐 API Reference — REST & SOAP Endpoints
+
+This section lists **all available API endpoints** exposed by the SmartCampus Connect backend. There are two types of APIs used:
+- **REST API** (port `8080`) — for all primary CRUD and business services
+- **SOAP/WSDL API** (port `8085`) — for the Legacy Library/Booking Service
+
+---
+
+### 👤 Student Profile Service (REST)
+**Base URL**: `http://localhost:8080/api/students`
+
+| Method | Endpoint | Description | Response |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/api/students` | Get all students | `200 OK` — JSON Array |
+| `GET` | `/api/students/{id}` | Get a specific student by ID | `200 OK` or `404 Not Found` |
+| `POST` | `/api/students` | Register a new student | `201 Created` — JSON Object |
+| `PUT` | `/api/students/{id}` | Update an existing student's info | `200 OK` or `404 Not Found` |
+| `DELETE` | `/api/students/{id}` | Remove a student record | `204 No Content` or `404 Not Found` |
+
+**Example `POST /api/students` Request Body:**
+```json
+{
+  "name": "Ahmad Azim",
+  "email": "azim@student.utem.edu.my",
+  "programme": "Computer Science",
+  "gpa": 3.75
+}
+```
+
+---
+
+### 📚 Course & Enrolment Service (REST)
+**Base URL**: `http://localhost:8080/api`
+
+| Method | Endpoint | Description | Response |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/api/courses` | Get all available courses | `200 OK` — JSON Array |
+| `GET` | `/api/courses/{code}` | Get a specific course by code | `200 OK` or `404 Not Found` |
+| `POST` | `/api/courses` | Create a new course | `201 Created` |
+| `POST` | `/api/enrol` | Enrol a student into a course (checks capacity) | `200 OK`, `400 Bad Request` (full), or `404 Not Found` |
+| `GET` | `/api/enrol/{studentId}` | List all courses a student is enrolled in | `200 OK` |
+| `DELETE` | `/api/enrol/{enrolmentId}` | Drop a student from a course | `204 No Content` |
+| `POST` | `/api/enrol/load-test` | Simulate 10 concurrent enrolments (R5 Demo) | `200 OK` with thread results |
+
+**Example `POST /api/enrol` Request Body:**
+```json
+{
+  "studentId": 1,
+  "courseCode": "CS301"
+}
+```
+
+> [!NOTE]
+> The `/api/enrol` endpoint is protected internally by a **`ReentrantLock`** to prevent race conditions on course seat capacity — demonstrating **R5 (Multithreaded / Concurrent State Protection)**.
+
+---
+
+### 📊 Reporting & Analytics Service (REST)
+**Base URL**: `http://localhost:8080/api/reporting`
+
+| Method | Endpoint | Description | Response |
+| :--- | :--- | :--- | :--- |
+| `GET` | `/api/reporting/stats` | Get overall campus statistics (total students, total enrolments, course capacity fill rates) | `200 OK` — JSON summary |
+| `GET` | `/api/reporting/enrolments-per-course` | Enrolment count grouped per course code | `200 OK` — JSON Array |
+
+**Example Response for `/api/reporting/stats`:**
+```json
+{
+  "totalStudents": 120,
+  "totalEnrolments": 310,
+  "totalCourses": 15,
+  "averageCapacityUsed": "68.7%"
+}
+```
+
+> [!NOTE]
+> This service demonstrates **R4 (Service Composition via Orchestration)** — it internally queries the Student and Enrolment services and combines results into a single analytical response.
+
+---
+
+### 🔔 Notification Service (Asynchronous TCP Socket — R6)
+
+The Notification Service is **not exposed via HTTP**. It runs as an asynchronous **TCP Server** on port `9090` inside the backend process.
+
+| Type | Port | Protocol | Direction | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| TCP Socket Server | `9090` | Raw TCP + JSON payload | Internal only | Receives events from Enrolment and Booking services and logs alert notifications |
+
+Whenever a successful enrolment or room booking occurs, the backend services act as **TCP Producers** and push a JSON payload to this internal TCP Consumer server. Example payload:
+```json
+{
+  "type": "ENROLMENT",
+  "studentId": 1,
+  "courseCode": "CS301",
+  "message": "Student Ahmad Azim has been enrolled in CS301",
+  "timestamp": "2025-05-25T12:00:00"
+}
+```
+
+---
+
+### 🏛️ Library / Booking Service — SOAP/WSDL (Legacy Integration — R8)
+**SOAP Endpoint URL**: `http://localhost:8085/ws/booking`  
+**WSDL Auto-generated at**: `http://localhost:8085/ws/booking?wsdl`
+
+This service simulates integration with a **legacy campus booking system** using **JAX-WS SOAP over HTTP**, as required by the BITP3123 coursework specification.
+
+| Operation | Method Name | Input Parameters | Return | SOAP Fault Triggered When |
+| :--- | :--- | :--- | :--- | :--- |
+| Book a Discussion Room | `bookRoom` | `studentId` (String), `roomName` (String), `slot` (String) | Confirmation message (String) | Room slot is already reserved |
+| Check Room Availability | `checkAvailability` | `roomName` (String), `slot` (String) | `true` or `false` (boolean) | Invalid room name |
+| Cancel a Booking | `cancelBooking` | `bookingId` (String) | Confirmation message (String) | Booking ID does not exist |
+
+**How to test using cURL:**
+```bash
+curl -X POST http://localhost:8085/ws/booking \
+  -H "Content-Type: text/xml" \
+  -d '
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ws="http://smartcampus.backend/ws">
+   <soapenv:Header/>
+   <soapenv:Body>
+      <ws:bookRoom>
+         <studentId>1</studentId>
+         <roomName>DK-A</roomName>
+         <slot>Monday 9AM-11AM</slot>
+      </ws:bookRoom>
+   </soapenv:Body>
+</soapenv:Envelope>'
+```
+
+**Expected SOAP Fault (when room is already booked):**
+```xml
+<S:Envelope xmlns:S="http://schemas.xmlsoap.org/soap/envelope/">
+   <S:Body>
+      <S:Fault>
+         <faultcode>S:Server</faultcode>
+         <faultstring>Room DK-A is already booked for slot Monday 9AM-11AM.</faultstring>
+      </S:Fault>
+   </S:Body>
+</S:Envelope>
+```
+
+> [!TIP]
+> You can also test the SOAP service visually using **SoapUI** (free) or **Postman** (supports SOAP requests). Simply import the WSDL from `http://localhost:8085/ws/booking?wsdl`.
+
+---
+
+### 🔗 Quick Reference Summary Table
+
+| Service | Protocol | Base URL | Port |
+| :--- | :--- | :--- | :--- |
+| Student Profile Service | **REST** | `http://localhost:8080/api/students` | `8080` |
+| Course Management | **REST** | `http://localhost:8080/api/courses` | `8080` |
+| Course Enrolment | **REST** | `http://localhost:8080/api/enrol` | `8080` |
+| Reporting & Analytics | **REST** | `http://localhost:8080/api/reporting` | `8080` |
+| Notification Service | **TCP Socket** | `tcp://localhost:9090` (Internal) | `9090` |
+| Library / Room Booking | **SOAP/WSDL** | `http://localhost:8085/ws/booking` | `8085` |
+| WSDL Definition File | **SOAP/WSDL** | `http://localhost:8085/ws/booking?wsdl` | `8085` |
+
+---
+
 ## 📁 Project File Structure
 
 Here is the directory tree of the project to help you navigate:
@@ -185,7 +346,9 @@ docker-compose up --build
 ### Step 4: Check if Everything is Running
 Open your web browser and visit:
 *   **Web Frontend App**: [http://localhost:3000](http://localhost:3000)
-*   **Backend API Endpoint**: [http://localhost:8080](http://localhost:8080)
+*   **Backend REST API**: [http://localhost:8080/api/students](http://localhost:8080/api/students)
+*   **Backend SOAP WSDL**: [http://localhost:8085/ws/booking?wsdl](http://localhost:8085/ws/booking?wsdl)
+*   **Notification TCP Server**: Listening internally on port `9090` (check Docker logs: `docker logs smartcampus-backend`)
 *   **MySQL Database**: Running on port `3306` inside Docker.
 
 *To stop the system, press `Ctrl + C` in the terminal or run `docker-compose down`.*
@@ -302,6 +465,10 @@ The Desktop Client resides in the `desktop` folder.
 > Another app (like another local server, Skype, or Oracle database) is running on port 8080.
 > *   **Fix 1**: Change `FORWARD_API_PORT` in your `.env` file to another port (e.g. `8081`).
 > *   **Fix 2**: Close the program occupying port 8080.
+
+> [!IMPORTANT]
+> **Cannot access SOAP WSDL at `http://localhost:8085/ws/booking?wsdl`?**
+> The JAX-WS SOAP endpoint runs inside the Spring Boot process on a **separate port (`8085`)**. Ensure this port is not blocked by your firewall and is correctly exposed in `docker-compose.yml`. If running manually, the port opens automatically when the Spring Boot app starts.
 
 > [!CAUTION]
 > **Web App shows a blank screen or errors related to CORS?**
