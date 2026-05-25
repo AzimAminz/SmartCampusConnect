@@ -1,0 +1,409 @@
+{
+  "info": {
+    "_postman_id": "1ec82aac-376b-4857-aaf5-221ba1500813",
+    "name": "SmartCampusConnect",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "34054929"
+  },
+  "item": [
+    {
+      "name": "Student API",
+      "item": [
+        {
+          "name": "Get All Student (Read All)",
+          "request": {
+            "method": "GET",
+            "header": []
+          },
+          "response": []
+        },
+        {
+          "name": "Get Student By Matric Number",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{url}}/students/sid/B032310001",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "students",
+                "sid",
+                "B032310001"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Add New Student (Create)",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "http://localhost:8080/api/students",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8080",
+              "path": [
+                "api",
+                "students"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Student By Id",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{url}}/students/1",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "students",
+                "1"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Course API",
+      "item": [
+        {
+          "name": "Get All Courses (Read All)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{url}}/courses",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "courses"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Course By Code Subject",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{url}}/courses/code/BITP3123",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "courses",
+                "code",
+                "BITP3123"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Add New Courses",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"courseCode\": \"BITP3132\",\n  \"courseTitle\": \"Mobile App Development\",\n  \"lecturer\": \"Dr. Wan\",\n  \"faculty\": \"FTMK\",\n  \"creditHours\": 3,\n  \"maxCapacity\": 5,\n  \"semester\": \"2024/2025 SEM 2\"\n}\n",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{url}}/courses",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "courses"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Enroll Services API",
+      "item": [
+        {
+          "name": "Add New Enrollment",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"studentId\": 1,\n  \"courseCode\": \"BITP3123\"\n}\n",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{url}}/enrol",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "enrol"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Thread Testing for Enrollment",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": ""
+            },
+            "url": {
+              "raw": "{{url}}/enrol/load-test/BITP3123",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "enrol",
+                "load-test",
+                "BITP3123"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Drop Subject",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "body": {
+              "mode": "raw",
+              "raw": ""
+            },
+            "url": {
+              "raw": "{{url}}/enrol/1/BITP3123",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "enrol",
+                "1",
+                "BITP3123"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Report API",
+      "item": [
+        {
+          "name": "Statistic For System Dashboard",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{url}}/reporting/stats",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "reporting",
+                "stats"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Student Statistic",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{url}}/reporting/student/B032310001",
+              "host": [
+                "{{url}}"
+              ],
+              "path": [
+                "reporting",
+                "student",
+                "B032310001"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Notification API",
+      "item": [
+        {
+          "name": "Get All Notification",
+          "request": {
+            "method": "GET",
+            "header": []
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Booking Services SOAP",
+      "item": [
+        {
+          "name": "Book Room",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "text/xml",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "<soapenv:Envelope xmlns:soapenv=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:ser=\"http://service.smartcampus/\">\n   <soapenv:Header/>\n   <soapenv:Body>\n      <ser:bookRoom>\n         <studentId>B032310001</studentId>\n         <studentName>Ahmad Bin Ali</studentName>\n         <roomName>DKG4</roomName>\n         <slot>10:00-12:00</slot>\n         <date>2026-06-01</date>\n         <purpose>Kajian Kumpulan Teragih</purpose>\n      </ser:bookRoom>\n   </soapenv:Body>\n</soapenv:Envelope>\n",
+              "options": {
+                "raw": {
+                  "language": "xml"
+                }
+              }
+            },
+            "url": {
+              "raw": "http://localhost:8085/ws/booking",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8085",
+              "path": [
+                "ws",
+                "booking"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Check Availability",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "text/xml",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "<soapenv:Envelope xmlns:soapenv=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:ser=\"http://service.smartcampus/\">\n   <soapenv:Header/>\n   <soapenv:Body>\n      <ser:checkAvailability>\n         <roomName>DKG4</roomName>\n         <slot>10:00-12:00</slot>\n         <date>2026-06-01</date>\n      </ser:checkAvailability>\n   </soapenv:Body>\n</soapenv:Envelope>\n"
+            },
+            "url": {
+              "raw": "http://localhost:8085/ws/booking",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8085",
+              "path": [
+                "ws",
+                "booking"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "New Request",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "text/xml",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "<soapenv:Envelope xmlns:soapenv=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:ser=\"http://service.smartcampus/\">\n   <soapenv:Header/>\n   <soapenv:Body>\n      <ser:borrowBook>\n         <studentId>B032310001</studentId>\n         <studentName>Ahmad Bin Ali</studentName>\n         <isbn>978-3-16-148410-0</isbn>\n         <title>Introduction to Distributed Systems</title>\n      </ser:borrowBook>\n   </soapenv:Body>\n</soapenv:Envelope>\n"
+            },
+            "url": {
+              "raw": "http://localhost:8085/ws/booking",
+              "protocol": "http",
+              "host": [
+                "localhost"
+              ],
+              "port": "8085",
+              "path": [
+                "ws",
+                "booking"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "packages": {},
+        "requests": {},
+        "exec": [
+          ""
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "packages": {},
+        "requests": {},
+        "exec": [
+          ""
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "url",
+      "value": ""
+    }
+  ]
+}
