@@ -588,7 +588,7 @@
           "response": []
         },
         {
-          "name": "borrowBook — Pinjam Buku",
+          "name": "borrowBook — Pinjam Buku (Admin)",
           "request": {
             "method": "POST",
             "header": [
@@ -596,7 +596,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "<soapenv:Envelope xmlns:soapenv=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:ser=\"http://service.smartcampus/\">\n   <soapenv:Header/>\n   <soapenv:Body>\n      <ser:borrowBook>\n         <studentId>B032310001</studentId>\n         <studentName>Muhammad Azim bin Aminudin</studentName>\n         <isbn>978-3-16-148410-0</isbn>\n         <title>Introduction to Distributed Systems</title>\n      </ser:borrowBook>\n   </soapenv:Body>\n</soapenv:Envelope>",
+              "raw": "<soapenv:Envelope xmlns:soapenv=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:ser=\"http://service.smartcampus/\">\n   <soapenv:Header/>\n   <soapenv:Body>\n      <ser:borrowBook>\n         <token>{{auth_token}}</token>\n         <studentId>B032310001</studentId>\n         <studentName>Muhammad Azim bin Aminudin</studentName>\n         <isbn>9780134685991</isbn>\n         <dueDate>2026-06-15</dueDate>\n      </ser:borrowBook>\n   </soapenv:Body>\n</soapenv:Envelope>",
               "options": { "raw": { "language": "xml" } }
             },
             "url": {
@@ -606,7 +606,7 @@
               "port": "8085",
               "path": ["ws", "booking"]
             },
-            "description": "Returns loanRef (e.g. LN-20260525-XXX). Tempoh pinjaman 14 hari."
+            "description": "Admin pinjamkan buku kepada pelajar dengan tarikh pemulangan custom. Memerlukan token Admin."
           },
           "response": []
         },
@@ -619,7 +619,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "<soapenv:Envelope xmlns:soapenv=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:ser=\"http://service.smartcampus/\">\n   <soapenv:Header/>\n   <soapenv:Body>\n      <ser:returnBook>\n         <loanRef>LN-20260525-001</loanRef>\n      </ser:returnBook>\n   </soapenv:Body>\n</soapenv:Envelope>",
+              "raw": "<soapenv:Envelope xmlns:soapenv=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:ser=\"http://service.smartcampus/\">\n   <soapenv:Header/>\n   <soapenv:Body>\n      <ser:returnBook>\n         <token>{{auth_token}}</token>\n         <loanRef>LN-20260525-001</loanRef>\n      </ser:returnBook>\n   </soapenv:Body>\n</soapenv:Envelope>",
               "options": { "raw": { "language": "xml" } }
             },
             "url": {
@@ -629,7 +629,99 @@
               "port": "8085",
               "path": ["ws", "booking"]
             },
-            "description": "Admin sahkan pemulangan buku. Kira denda jika lambat (RM1/hari). Gantikan loanRef dengan ref dari borrowBook."
+            "description": "Admin sahkan pemulangan buku. Kira denda jika lambat (RM1/hari). Memerlukan token Admin."
+          },
+          "response": []
+        },
+        {
+          "name": "addBook — Tambah Buku Baru (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "text/xml", "type": "text" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "<soapenv:Envelope xmlns:soapenv=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:ser=\"http://service.smartcampus/\">\n   <soapenv:Header/>\n   <soapenv:Body>\n      <ser:addBook>\n         <token>{{auth_token}}</token>\n         <isbn>9780132350884</isbn>\n         <title>Clean Code</title>\n         <author>Robert C. Martin</author>\n         <category>Software Engineering</category>\n      </ser:addBook>\n   </soapenv:Body>\n</soapenv:Envelope>",
+              "options": { "raw": { "language": "xml" } }
+            },
+            "url": {
+              "raw": "http://localhost:8085/ws/booking",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8085",
+              "path": ["ws", "booking"]
+            },
+            "description": "Daftarkan buku baru ke dalam katalog master library. Memerlukan token Admin."
+          },
+          "response": []
+        },
+        {
+          "name": "searchBooks — Cari Buku (Pelajar & Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "text/xml", "type": "text" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "<soapenv:Envelope xmlns:soapenv=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:ser=\"http://service.smartcampus/\">\n   <soapenv:Header/>\n   <soapenv:Body>\n      <ser:searchBooks>\n         <query>Java</query>\n      </ser:searchBooks>\n   </soapenv:Body>\n</soapenv:Envelope>",
+              "options": { "raw": { "language": "xml" } }
+            },
+            "url": {
+              "raw": "http://localhost:8085/ws/booking",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8085",
+              "path": ["ws", "booking"]
+            },
+            "description": "Cari buku berdasarkan kata kunci atau ISBN. Biarkan kosong untuk paparkan semua buku."
+          },
+          "response": []
+        },
+        {
+          "name": "getBookLoanHistory — Sejarah Pinjaman Buku (Admin)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "text/xml", "type": "text" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "<soapenv:Envelope xmlns:soapenv=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:ser=\"http://service.smartcampus/\">\n   <soapenv:Header/>\n   <soapenv:Body>\n      <ser:getBookLoanHistory>\n         <token>{{auth_token}}</token>\n         <isbn>9780134685991</isbn>\n      </ser:getBookLoanHistory>\n   </soapenv:Body>\n</soapenv:Envelope>",
+              "options": { "raw": { "language": "xml" } }
+            },
+            "url": {
+              "raw": "http://localhost:8085/ws/booking",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8085",
+              "path": ["ws", "booking"]
+            },
+            "description": "Lihat senarai sesiapa sahaja yang pernah meminjam buku spesifik ini. Memerlukan token Admin."
+          },
+          "response": []
+        },
+        {
+          "name": "getStudentLoanHistory — Sejarah Pinjaman Pelajar",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "text/xml", "type": "text" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "<soapenv:Envelope xmlns:soapenv=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:ser=\"http://service.smartcampus/\">\n   <soapenv:Header/>\n   <soapenv:Body>\n      <ser:getStudentLoanHistory>\n         <token>{{auth_token}}</token>\n         <studentId>B032310001</studentId>\n      </ser:getStudentLoanHistory>\n   </soapenv:Body>\n</soapenv:Envelope>",
+              "options": { "raw": { "language": "xml" } }
+            },
+            "url": {
+              "raw": "http://localhost:8085/ws/booking",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8085",
+              "path": ["ws", "booking"]
+            },
+            "description": "Lihat senarai sejarah pinjaman pelajar. Pelajar biasa hanya boleh melihat rekod mereka sendiri (studentId mestilah sepadan dengan token)."
           },
           "response": []
         }

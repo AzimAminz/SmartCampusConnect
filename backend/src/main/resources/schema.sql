@@ -161,7 +161,25 @@ CREATE TABLE IF NOT EXISTS `room_bookings` (
   COMMENT='Library/Booking Service - discussion room bookings via SOAP (R8)';
 
 -- =========================================================================
--- TABLE 7: book_loans
+-- TABLE 7: books
+-- Service  : Library / Booking Service
+-- Protocol : SOAP/WSDL  (operations: searchBooks, addBook, borrowBook, returnBook)
+-- =========================================================================
+CREATE TABLE IF NOT EXISTS `books` (
+    `id`          BIGINT       NOT NULL AUTO_INCREMENT,
+    `isbn`        VARCHAR(20)  NOT NULL COMMENT 'Unique Book ISBN',
+    `title`       VARCHAR(200) NOT NULL,
+    `author`      VARCHAR(150) DEFAULT NULL,
+    `category`    VARCHAR(100) DEFAULT NULL,
+    `status`      ENUM('AVAILABLE','BORROWED') NOT NULL DEFAULT 'AVAILABLE',
+    `created_at`  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uq_books_isbn` (`isbn`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+  COMMENT='Library/Booking Service - master book catalog';
+
+-- =========================================================================
+-- TABLE 8: book_loans
 -- Service  : Library / Booking Service
 -- Protocol : SOAP/WSDL  (operations: borrowBook, returnBook)
 -- R8 NOTE  : Admin confirms return via SOAP returnBook operation.
@@ -188,7 +206,7 @@ CREATE TABLE IF NOT EXISTS `book_loans` (
   COMMENT='Library/Booking Service - book loan records with overdue and fine tracking';
 
 -- =========================================================================
--- TABLE 8: notifications
+-- TABLE 9: notifications
 -- Service  : Notification Service
 -- Protocol : Internal TCP Socket (port 9090) — NOT exposed via HTTP
 -- R6 NOTE  : This table logs every event pushed by the TCP Producer services.
@@ -252,3 +270,11 @@ INSERT IGNORE INTO `courses` (`course_code`, `course_title`, `lecturer`, `facult
 ('BITM3073', 'Network Security',                    'Dr. Azuan',       'FTMK', 3, 0, 25, '2024/2025 SEM 1'),
 ('BITU3033', 'Software Engineering',                'Dr. Ruzaini',     'FTMK', 3, 0, 35, '2024/2025 SEM 1'),
 ('BITP3113', 'Web Application Development',         'Dr. Shahrol',     'FTMK', 3, 0, 30, '2024/2025 SEM 1');
+
+-- Sample Books
+INSERT IGNORE INTO `books` (`isbn`, `title`, `author`, `category`, `status`) VALUES
+('9780134685991', 'Effective Java', 'Joshua Bloch', 'Software Engineering', 'AVAILABLE'),
+('9780132350884', 'Clean Code', 'Robert C. Martin', 'Software Engineering', 'AVAILABLE'),
+('9780135957059', 'The Pragmatic Programmer', 'David Thomas', 'Software Engineering', 'AVAILABLE'),
+('9780321356680', 'Design Patterns', 'Erich Gamma', 'Computer Science', 'AVAILABLE'),
+('9780134092669', 'Introduction to Algorithms', 'Thomas H. Cormen', 'Algorithms', 'AVAILABLE');

@@ -6,9 +6,11 @@ import org.springframework.stereotype.Component;
 import smartcampus.backend.model.Course;
 import smartcampus.backend.model.Student;
 import smartcampus.backend.model.User;
+import smartcampus.backend.model.Book;
 import smartcampus.backend.repository.CourseRepository;
 import smartcampus.backend.repository.StudentRepository;
 import smartcampus.backend.repository.UserRepository;
+import smartcampus.backend.repository.BookRepository;
 
 /**
  * Seeds sample data into the database on first startup.
@@ -21,12 +23,14 @@ public class DatabaseInitializer {
     @Autowired private StudentRepository studentRepository;
     @Autowired private CourseRepository courseRepository;
     @Autowired private UserRepository userRepository;
+    @Autowired private BookRepository bookRepository;
 
     @PostConstruct
     public void seed() {
         seedStudents();
         seedCourses();
         seedUsers();  // Must run AFTER seedStudents so names are available
+        seedBooks();
     }
 
     private void seedStudents() {
@@ -109,5 +113,17 @@ public class DatabaseInitializer {
         );
 
         System.out.println("✅ [DB-INIT] Seeded users: 1 admin + " + studentRepository.count() + " students");
+    }
+
+    private void seedBooks() {
+        if (bookRepository.count() > 0) return;
+
+        bookRepository.save(new Book("9780134685991", "Effective Java", "Joshua Bloch", "Software Engineering"));
+        bookRepository.save(new Book("9780132350884", "Clean Code", "Robert C. Martin", "Software Engineering"));
+        bookRepository.save(new Book("9780135957059", "The Pragmatic Programmer", "David Thomas", "Software Engineering"));
+        bookRepository.save(new Book("9780321356680", "Design Patterns", "Erich Gamma", "Computer Science"));
+        bookRepository.save(new Book("9780134092669", "Introduction to Algorithms", "Thomas H. Cormen", "Algorithms"));
+
+        System.out.println("✅ [DB-INIT] Seeded 5 sample books");
     }
 }

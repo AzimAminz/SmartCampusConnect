@@ -8,8 +8,6 @@ import smartcampus.backend.model.User;
 import smartcampus.backend.model.UserSession;
 import smartcampus.backend.repository.UserRepository;
 import smartcampus.backend.repository.UserSessionRepository;
-
-import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;

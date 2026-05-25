@@ -235,8 +235,12 @@ This service simulates integration with a **legacy campus booking system** using
 | Tempah Bilik | `bookRoom` | `studentId`, `studentName`, `roomName`, `slot`, `date` (yyyy-MM-dd), `purpose` | Booking reference string | Bilik + slot + tarikh sudah ditempah |
 | Semak Kekosongan | `checkAvailability` | `roomName`, `slot`, `date` | `true` (tersedia) atau `false` | — |
 | Batalkan Tempahan | `cancelBooking` | `bookingRef` | `true` | Ref tidak wujud atau sudah dibatalkan |
-| Pinjam Buku | `borrowBook` | `studentId`, `studentName`, `isbn`, `title` | Loan reference string | Buku sudah dipinjam oleh pelajar sama |
-| Pulangkan Buku (Admin) | `returnBook` | `loanRef` | `true` | Ref tidak wujud atau sudah dipulangkan |
+| Pinjam Buku (Admin) | `borrowBook` | `token`, `studentId`, `studentName`, `isbn`, `dueDate` (yyyy-MM-dd) | Loan reference string | Buku sudah dipinjam, tiada dalam katalog, atau due date lampau |
+| Pulangkan Buku (Admin) | `returnBook` | `token`, `loanRef` | `true` | Sesi tidak sah atau buku sudah dipulangkan |
+| Tambah Buku (Admin) | `addBook` | `token`, `isbn`, `title`, `author`, `category` | `true` | ISBN bertindih atau sesi tidak sah |
+| Cari Buku (Pelajar/Admin) | `searchBooks` | `query` (kata carian atau kosong untuk semua) | List of `Book` | — |
+| Sejarah Buku (Admin) | `getBookLoanHistory` | `token`, `isbn` | List of `BookLoan` | Sesi tidak sah atau bukan admin |
+| Sejarah Pelajar (Pelajar/Admin) | `getStudentLoanHistory` | `token`, `studentId` | List of `BookLoan` | Sesi tidak sah atau carian pelajar lain |
 
 **How to test using cURL:**
 ```bash
@@ -444,7 +448,21 @@ SELECT * FROM user_sessions;
 
 ---
 
-### Table 7: `book_loans` — Library/Booking Service (SOAP)
+### Table 7: `books` — Library/Booking Service (SOAP)
+
+| Column | Type | Constraint | Description |
+| :--- | :--- | :--- | :--- |
+| `id` | BIGINT | PK, AUTO_INCREMENT | Internal surrogate key |
+| `isbn` | VARCHAR(20) | UNIQUE, NOT NULL | Unique Book ISBN |
+| `title` | VARCHAR(200) | NOT NULL | Title of the book |
+| `author` | VARCHAR(150) | — | Author name |
+| `category` | VARCHAR(100) | — | Book category/genre |
+| `status` | ENUM | NOT NULL, DEFAULT `AVAILABLE` | Availability state: `AVAILABLE` / `BORROWED` |
+| `created_at` | DATETIME | NOT NULL | Record creation timestamp |
+
+---
+
+### Table 8: `book_loans` — Library/Booking Service (SOAP)
 
 | Column | Type | Constraint | Description |
 | :--- | :--- | :--- | :--- |
@@ -452,10 +470,10 @@ SELECT * FROM user_sessions;
 | `loan_reference` | VARCHAR(30) | UNIQUE, NOT NULL | e.g. LN-20250525-001 |
 | `student_id` | VARCHAR(20) | NOT NULL, INDEX | Student matric number |
 | `student_name` | VARCHAR(100) | — | Student name |
-| `book_isbn` | VARCHAR(20) | NOT NULL, INDEX | Book ISBN-13 |
+| `book_isbn` | VARCHAR(20) | NOT NULL, INDEX | Book ISBN-13 (referenced from catalog) |
 | `book_title` | VARCHAR(200) | — | Book title |
 | `loan_date` | DATE | NOT NULL | Date book was borrowed |
-| `due_date` | DATE | NOT NULL | Return deadline (typically +14 days) |
+| `due_date` | DATE | NOT NULL | Return deadline (custom set by Admin) |
 | `return_date` | DATE | — | Actual return date (NULL until returned) |
 | `status` | ENUM | NOT NULL | `BORROWED` / `RETURNED` / `OVERDUE` / `LOST` |
 | `fine_amount` | DECIMAL(8,2) | NOT NULL, DEFAULT 0.00 | Late return fine in RM |
@@ -463,7 +481,7 @@ SELECT * FROM user_sessions;
 
 ---
 
-### Table 8: `notifications` — Notification Service (TCP Socket)
+### Table 9: `notifications` — Notification Service (TCP Socket)
 
 | Column | Type | Constraint | Description |
 | :--- | :--- | :--- | :--- |

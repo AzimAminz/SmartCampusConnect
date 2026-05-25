@@ -18,6 +18,8 @@ public interface BookLoanRepository extends JpaRepository<BookLoan, Long> {
 
     List<BookLoan> findByStudentId(String studentId);
 
+    List<BookLoan> findByBookIsbn(String bookIsbn);
+
     List<BookLoan> findByStatus(BookLoan.LoanStatus status);
 
     boolean existsByStudentIdAndBookIsbnAndStatus(String studentId, String bookIsbn, BookLoan.LoanStatus status);
