@@ -12,9 +12,9 @@ The system is designed with a modern distributed architecture containing the fol
 
 ```mermaid
 graph TD
-    classDef client fill:#f9f,stroke:black,stroke-width:2px;
-    classDef server fill:#bbf,stroke:black,stroke-width:2px;
-    classDef db fill:#fbf,stroke:black,stroke-width:2px;
+    classDef client fill:#f9f,stroke:black,stroke-width:2px,color:#000;
+    classDef server fill:#bbf,stroke:black,stroke-width:2px,color:#000;
+    classDef db fill:#fbf,stroke:black,stroke-width:2px,color:#000;
 
     Web[🌐 Web Frontend - Vanilla JS SPA]:::client
     Mobile[📱 Mobile Client - Flutter App]:::client
