@@ -45,7 +45,7 @@ public class BookLoan {
     @Column(nullable = false, length = 15)
     private LoanStatus status = LoanStatus.BORROWED;
 
-    @Column(name = "fine_amount", precision = 8, scale = 2)
+    @Column(name = "fine_amount")
     private Double fineAmount = 0.0; // Late return fee in RM
 
     @Column(name = "created_at", updatable = false)

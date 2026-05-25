@@ -34,7 +34,7 @@ public class Student {
     @Column(nullable = false, length = 10)
     private String semester = "1"; // Current semester
 
-    @Column(precision = 4, scale = 2)
+    @Column
     private Double gpa;
 
     @Column(name = "phone_number", length = 15)

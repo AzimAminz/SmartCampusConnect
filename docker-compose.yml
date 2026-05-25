@@ -57,6 +57,7 @@ services:
       # Custom port bindings passed as JVM env (optional override)
       SOAP_SERVER_PORT: "${FORWARD_SOAP_PORT:-8085}"
       NOTIFY_SERVER_PORT: "${FORWARD_NOTIFY_PORT:-9090}"
+      NOTIFY_SERVER_HOST: "localhost"
     depends_on:
       mysql-db:
         condition: service_healthy
