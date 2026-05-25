@@ -216,6 +216,219 @@ curl -X POST http://localhost:8085/ws/booking \
 
 ---
 
+## 🗄️ Database Schema
+
+The system uses a **single MySQL database (`smartcampus`)** where each service operates on its own set of tables — simulating the *database-per-service* principle of SOA (R3).
+
+> [!NOTE]
+> Tables are **auto-created by Hibernate/JPA** when the Spring Boot backend starts (`ddl-auto=update`). The raw SQL schema is also available at [`backend/src/main/resources/schema.sql`](file:///Users/azimamin/Documents/utem/degree/sem%201/BITP3123%20DISTRIBUTED%20APPLICATION%20DEVELOPMENT/SmartCampusConnect/backend/src/main/resources/schema.sql) for manual setup or reference.
+
+---
+
+### Table 1: `students` — Student Profile Service (REST)
+
+| Column | Type | Constraint | Description |
+| :--- | :--- | :--- | :--- |
+| `id` | BIGINT | PK, AUTO_INCREMENT | Internal surrogate key |
+| `student_id` | VARCHAR(20) | UNIQUE, NOT NULL | Official matric number e.g. B032310001 |
+| `name` | VARCHAR(100) | NOT NULL | Full name |
+| `email` | VARCHAR(150) | UNIQUE, NOT NULL | Institutional email |
+| `programme` | VARCHAR(100) | — | Degree programme e.g. Bachelor of Computer Science |
+| `faculty` | VARCHAR(50) | — | Faculty code e.g. FTMK |
+| `semester` | VARCHAR(10) | NOT NULL | Current semester number |
+| `gpa` | DECIMAL(4,2) | — | Cumulative GPA |
+| `phone_number` | VARCHAR(15) | — | Contact number |
+| `created_at` | DATETIME | NOT NULL | Record creation timestamp |
+| `updated_at` | DATETIME | — | Last update timestamp |
+
+---
+
+### Table 2: `courses` — Course Enrolment Service (REST)
+
+| Column | Type | Constraint | Description |
+| :--- | :--- | :--- | :--- |
+| `id` | BIGINT | PK, AUTO_INCREMENT | Internal surrogate key |
+| `course_code` | VARCHAR(20) | UNIQUE, NOT NULL | Course code e.g. BITP3123 |
+| `course_title` | VARCHAR(150) | NOT NULL | Full course name |
+| `lecturer` | VARCHAR(100) | — | Lecturer name |
+| `faculty` | VARCHAR(50) | — | Faculty offering the course |
+| `credit_hours` | INT | NOT NULL, DEFAULT 3 | Credit hours |
+| `current_capacity` | INT | NOT NULL, DEFAULT 0 | ⚠️ **Shared mutable state — protected by `ReentrantLock` (R5)** |
+| `max_capacity` | INT | NOT NULL, DEFAULT 30 | Maximum allowed enrolments |
+| `semester` | VARCHAR(20) | — | Offering semester e.g. 2024/2025 SEM 2 |
+| `created_at` | DATETIME | NOT NULL | Record creation timestamp |
+
+---
+
+### Table 3: `enrolments` — Course Enrolment Service (REST)
+
+| Column | Type | Constraint | Description |
+| :--- | :--- | :--- | :--- |
+| `id` | BIGINT | PK, AUTO_INCREMENT | Internal surrogate key |
+| `student_id` | BIGINT | NOT NULL, INDEX | Reference to `students.id` |
+| `course_code` | VARCHAR(20) | NOT NULL, INDEX | Reference to `courses.course_code` |
+| `student_name` | VARCHAR(100) | — | Denormalized student name (display) |
+| `course_title` | VARCHAR(150) | — | Denormalized course title (display) |
+| `status` | ENUM | NOT NULL | `ACTIVE` / `DROPPED` / `COMPLETED` |
+| `enrolled_at` | DATETIME | NOT NULL | Timestamp of enrolment |
+| `dropped_at` | DATETIME | — | Timestamp of course drop (if applicable) |
+| — | UNIQUE | `(student_id, course_code)` | Prevents duplicate enrolment |
+
+> [!NOTE]
+> A successful enrolment fires a **TCP socket event** to the Notification Service (R4, R6).
+
+---
+
+### Table 4: `room_bookings` — Library/Booking Service (SOAP)
+
+| Column | Type | Constraint | Description |
+| :--- | :--- | :--- | :--- |
+| `id` | BIGINT | PK, AUTO_INCREMENT | Internal surrogate key |
+| `booking_reference` | VARCHAR(30) | UNIQUE, NOT NULL | e.g. BK-20250525-001 |
+| `student_id` | VARCHAR(20) | NOT NULL, INDEX | Student matric number |
+| `student_name` | VARCHAR(100) | — | Student name |
+| `room_name` | VARCHAR(50) | NOT NULL | Room identifier e.g. DK-A, Library Room 1 |
+| `slot` | VARCHAR(50) | NOT NULL | Time slot e.g. Monday 9AM-11AM |
+| `booking_date` | DATE | NOT NULL | Date of the booking |
+| `status` | ENUM | NOT NULL | `CONFIRMED` / `CANCELLED` / `COMPLETED` |
+| `purpose` | VARCHAR(300) | — | Reason for booking |
+| `booked_at` | DATETIME | NOT NULL | Booking creation timestamp |
+| `cancelled_at` | DATETIME | — | Cancellation timestamp |
+| — | UNIQUE | `(room_name, slot, booking_date)` | Triggers **SOAP Fault** if duplicated (R8) |
+
+> [!IMPORTANT]
+> This table is managed exclusively via the **SOAP/WSDL** endpoint at `http://localhost:8085/ws/booking`. Attempting to double-book a room triggers a standard **JAX-WS SOAP Fault** response.
+
+---
+
+### Table 5: `book_loans` — Library/Booking Service (SOAP)
+
+| Column | Type | Constraint | Description |
+| :--- | :--- | :--- | :--- |
+| `id` | BIGINT | PK, AUTO_INCREMENT | Internal surrogate key |
+| `loan_reference` | VARCHAR(30) | UNIQUE, NOT NULL | e.g. LN-20250525-001 |
+| `student_id` | VARCHAR(20) | NOT NULL, INDEX | Student matric number |
+| `student_name` | VARCHAR(100) | — | Student name |
+| `book_isbn` | VARCHAR(20) | NOT NULL, INDEX | Book ISBN-13 |
+| `book_title` | VARCHAR(200) | — | Book title |
+| `loan_date` | DATE | NOT NULL | Date book was borrowed |
+| `due_date` | DATE | NOT NULL | Return deadline (typically +14 days) |
+| `return_date` | DATE | — | Actual return date (NULL until returned) |
+| `status` | ENUM | NOT NULL | `BORROWED` / `RETURNED` / `OVERDUE` / `LOST` |
+| `fine_amount` | DECIMAL(8,2) | NOT NULL, DEFAULT 0.00 | Late return fine in RM |
+| `created_at` | DATETIME | NOT NULL | Loan creation timestamp |
+
+---
+
+### Table 6: `notifications` — Notification Service (TCP Socket)
+
+| Column | Type | Constraint | Description |
+| :--- | :--- | :--- | :--- |
+| `id` | BIGINT | PK, AUTO_INCREMENT | Internal surrogate key |
+| `type` | ENUM | NOT NULL | Event type (see below) |
+| `recipient_id` | VARCHAR(20) | NOT NULL, INDEX | Student or staff ID |
+| `recipient_name` | VARCHAR(100) | — | Recipient name |
+| `message` | VARCHAR(500) | NOT NULL | Notification message text |
+| `related_entity` | VARCHAR(50) | — | e.g. course code or booking ref |
+| `delivery_status` | ENUM | NOT NULL | `SENT` / `FAILED` / `PENDING` |
+| `channel` | VARCHAR(20) | NOT NULL | Transport channel e.g. `TCP_SOCKET` |
+| `created_at` | DATETIME | NOT NULL, INDEX | Timestamp of notification |
+
+**Available `type` values:**
+
+| Type | Triggered By |
+| :--- | :--- |
+| `ENROLMENT_SUCCESS` | Successful course enrolment |
+| `ENROLMENT_FAILED` | Course full or student not found |
+| `ENROLMENT_DROPPED` | Student drops a course |
+| `ROOM_BOOKED` | SOAP room booking confirmed |
+| `ROOM_CANCELLED` | SOAP room booking cancelled |
+| `BOOK_BORROWED` | SOAP book loan created |
+| `BOOK_RETURNED` | SOAP book returned |
+| `BOOK_OVERDUE` | Scheduled overdue check |
+| `PAYMENT_DUE` | Scheduled payment reminder |
+| `SYSTEM_ALERT` | Generic system events |
+
+> [!NOTE]
+> Every notification is first pushed **asynchronously via a TCP Socket** (R6) to port `9090`, then saved here as a persistent log for audit and the Reporting Service.
+
+---
+
+### Entity Relationship Overview
+
+```mermaid
+erDiagram
+    STUDENTS {
+        bigint id PK
+        varchar student_id UK
+        varchar name
+        varchar email UK
+        varchar programme
+        varchar faculty
+        varchar semester
+        decimal gpa
+        datetime created_at
+    }
+
+    COURSES {
+        bigint id PK
+        varchar course_code UK
+        varchar course_title
+        varchar lecturer
+        int current_capacity
+        int max_capacity
+        varchar semester
+    }
+
+    ENROLMENTS {
+        bigint id PK
+        bigint student_id FK
+        varchar course_code FK
+        enum status
+        datetime enrolled_at
+        datetime dropped_at
+    }
+
+    ROOM_BOOKINGS {
+        bigint id PK
+        varchar booking_reference UK
+        varchar student_id
+        varchar room_name
+        varchar slot
+        date booking_date
+        enum status
+    }
+
+    BOOK_LOANS {
+        bigint id PK
+        varchar loan_reference UK
+        varchar student_id
+        varchar book_isbn
+        date loan_date
+        date due_date
+        enum status
+        decimal fine_amount
+    }
+
+    NOTIFICATIONS {
+        bigint id PK
+        enum type
+        varchar recipient_id
+        varchar message
+        enum delivery_status
+        varchar channel
+        datetime created_at
+    }
+
+    STUDENTS ||--o{ ENROLMENTS : "enrolls in"
+    COURSES   ||--o{ ENROLMENTS : "has"
+    ENROLMENTS ||--o{ NOTIFICATIONS : "triggers"
+    ROOM_BOOKINGS ||--o{ NOTIFICATIONS : "triggers"
+    BOOK_LOANS    ||--o{ NOTIFICATIONS : "triggers"
+```
+
+---
+
 ## 📁 Project File Structure
 
 Here is the directory tree of the project to help you navigate:
