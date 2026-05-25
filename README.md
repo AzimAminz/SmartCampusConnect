@@ -295,7 +295,80 @@ The system uses a **single MySQL database (`smartcampus`)** where each service o
 
 ---
 
-### Table 1: `students` — Student Profile Service (REST)
+### 🔄 MySQL Database Migration Guide (Manual Setup)
+
+By default, the Spring Boot application handles database setup automatically using Hibernate's `ddl-auto=update` configuration. However, if you need to manually migrate the database, seed new data, or run the schema SQL script, you can do so using the following methods:
+
+#### Option 1: If using Docker (Recommended)
+You can pipe the `schema.sql` directly into the running MySQL container. Run this command from the project root directory:
+```bash
+docker exec -i smartcampus-mysql mysql -u root -psmartcampus123 smartcampus < backend/src/main/resources/schema.sql
+```
+*(Make sure the containers are running with `docker-compose up -d` before executing this command).*
+
+#### Option 2: If running MySQL locally (Manual Setup)
+If you have MySQL installed on your local host (e.g. via XAMPP, Homebrew, or standard installer), run these commands:
+
+1. Log in to your local MySQL CLI:
+   ```bash
+   mysql -u root -p
+   ```
+   *(Enter your local MySQL password if prompted).*
+
+2. Create the database (if not exists):
+   ```sql
+   CREATE DATABASE IF NOT EXISTS smartcampus;
+   USE smartcampus;
+   ```
+
+3. Import the `schema.sql` file:
+   ```bash
+   mysql -u root -p smartcampus < backend/src/main/resources/schema.sql
+   ```
+   *(Or on Windows Command Prompt/PowerShell: `mysql -u root -p smartcampus < backend\src\main\resources\schema.sql`)*
+
+#### Option 3: Accessing the Database CLI directly
+To access the MySQL prompt inside the running Docker container to inspect tables manually:
+```bash
+docker exec -it smartcampus-mysql mysql -u root -psmartcampus123 smartcampus
+```
+Once inside, you can run normal SQL commands such as:
+```sql
+SHOW TABLES;
+SELECT * FROM users;
+SELECT * FROM students;
+SELECT * FROM user_sessions;
+```
+
+---
+
+### Table 1: `users` — Auth Service (REST)
+
+| Column | Type | Constraint | Description |
+| :--- | :--- | :--- | :--- |
+| `id` | BIGINT | PK, AUTO_INCREMENT | Internal surrogate key |
+| `user_id` | VARCHAR(20) | UNIQUE, NOT NULL | Official student matric number or "ADMIN" |
+| `role` | ENUM('STUDENT','ADMIN') | NOT NULL, DEFAULT 'STUDENT' | Role of the user defining access level |
+| `full_name` | VARCHAR(100) | — | Display name of the user |
+| `created_at` | DATETIME | NOT NULL | Record creation timestamp |
+
+---
+
+### Table 2: `user_sessions` — Auth Service (REST)
+
+| Column | Type | Constraint | Description |
+| :--- | :--- | :--- | :--- |
+| `id` | BIGINT | PK, AUTO_INCREMENT | Internal surrogate key |
+| `token` | VARCHAR(100) | UNIQUE, NOT NULL | UUID token returned after successful login |
+| `user_id` | VARCHAR(20) | NOT NULL, INDEX | Matric number or ADMIN (logical FK) |
+| `role` | ENUM('STUDENT','ADMIN') | NOT NULL | Role of the session user |
+| `full_name` | VARCHAR(100) | — | Cached user full name for rapid verification |
+| `created_at` | DATETIME | NOT NULL | Session creation timestamp |
+| `expires_at` | DATETIME | NOT NULL | Session expiration timestamp (24 hours duration) |
+
+---
+
+### Table 3: `students` — Student Profile Service (REST)
 
 | Column | Type | Constraint | Description |
 | :--- | :--- | :--- | :--- |
@@ -313,7 +386,7 @@ The system uses a **single MySQL database (`smartcampus`)** where each service o
 
 ---
 
-### Table 2: `courses` — Course Enrolment Service (REST)
+### Table 4: `courses` — Course Enrolment Service (REST)
 
 | Column | Type | Constraint | Description |
 | :--- | :--- | :--- | :--- |
@@ -330,7 +403,7 @@ The system uses a **single MySQL database (`smartcampus`)** where each service o
 
 ---
 
-### Table 3: `enrolments` — Course Enrolment Service (REST)
+### Table 5: `enrolments` — Course Enrolment Service (REST)
 
 | Column | Type | Constraint | Description |
 | :--- | :--- | :--- | :--- |
@@ -349,7 +422,7 @@ The system uses a **single MySQL database (`smartcampus`)** where each service o
 
 ---
 
-### Table 4: `room_bookings` — Library/Booking Service (SOAP)
+### Table 6: `room_bookings` — Library/Booking Service (SOAP)
 
 | Column | Type | Constraint | Description |
 | :--- | :--- | :--- | :--- |
@@ -371,7 +444,7 @@ The system uses a **single MySQL database (`smartcampus`)** where each service o
 
 ---
 
-### Table 5: `book_loans` — Library/Booking Service (SOAP)
+### Table 7: `book_loans` — Library/Booking Service (SOAP)
 
 | Column | Type | Constraint | Description |
 | :--- | :--- | :--- | :--- |
@@ -390,7 +463,7 @@ The system uses a **single MySQL database (`smartcampus`)** where each service o
 
 ---
 
-### Table 6: `notifications` — Notification Service (TCP Socket)
+### Table 8: `notifications` — Notification Service (TCP Socket)
 
 | Column | Type | Constraint | Description |
 | :--- | :--- | :--- | :--- |
@@ -428,6 +501,23 @@ The system uses a **single MySQL database (`smartcampus`)** where each service o
 
 ```mermaid
 erDiagram
+    USERS {
+        bigint id PK
+        varchar user_id UK
+        enum role
+        varchar full_name
+        datetime created_at
+    }
+
+    USER_SESSIONS {
+        bigint id PK
+        varchar token UK
+        varchar user_id FK
+        enum role
+        varchar full_name
+        datetime expires_at
+    }
+
     STUDENTS {
         bigint id PK
         varchar student_id UK
@@ -462,7 +552,7 @@ erDiagram
     ROOM_BOOKINGS {
         bigint id PK
         varchar booking_reference UK
-        varchar student_id
+        varchar student_id FK
         varchar room_name
         varchar slot
         date booking_date
@@ -472,7 +562,7 @@ erDiagram
     BOOK_LOANS {
         bigint id PK
         varchar loan_reference UK
-        varchar student_id
+        varchar student_id FK
         varchar book_isbn
         date loan_date
         date due_date
@@ -483,18 +573,24 @@ erDiagram
     NOTIFICATIONS {
         bigint id PK
         enum type
-        varchar recipient_id
+        varchar recipient_id FK
         varchar message
         enum delivery_status
         varchar channel
         datetime created_at
     }
 
+    USERS ||--o| STUDENTS : "optionally links to"
+    USERS ||--o{ USER_SESSIONS : "has active"
     STUDENTS ||--o{ ENROLMENTS : "enrolls in"
     COURSES   ||--o{ ENROLMENTS : "has"
+    STUDENTS ||--o{ ROOM_BOOKINGS : "books"
+    STUDENTS ||--o{ BOOK_LOANS : "borrows"
+    STUDENTS ||--o{ NOTIFICATIONS : "receives"
     ENROLMENTS ||--o{ NOTIFICATIONS : "triggers"
     ROOM_BOOKINGS ||--o{ NOTIFICATIONS : "triggers"
     BOOK_LOANS    ||--o{ NOTIFICATIONS : "triggers"
+```
 ```
 
 ---
