@@ -55,9 +55,13 @@ public class EnrolmentService {
             Course course = courseRepository.findByCourseCode(courseCode)
                     .orElseThrow(() -> new IllegalArgumentException("Course not found: " + courseCode));
 
-            // Check duplicate
-            if (enrolmentRepository.existsByStudentIdAndCourseCode(studentId, courseCode)) {
-                return Map.of("success", false, "message", "Student is already enrolled in " + courseCode);
+            // Check duplicate or dropped status
+            java.util.Optional<Enrolment> existingOpt = enrolmentRepository.findByStudentIdAndCourseCode(studentId, courseCode);
+            if (existingOpt.isPresent()) {
+                Enrolment existing = existingOpt.get();
+                if (existing.getStatus() == Enrolment.EnrolmentStatus.ACTIVE) {
+                    return Map.of("success", false, "message", "Student is already enrolled in " + courseCode);
+                }
             }
 
             // Check capacity
@@ -71,8 +75,16 @@ public class EnrolmentService {
                         + " (" + course.getCurrentCapacity() + "/" + course.getMaxCapacity() + " seats)");
             }
 
-            // Enrol
-            Enrolment enrolment = new Enrolment(studentId, courseCode, student.getName(), course.getCourseTitle());
+            // Enrol (reactivate if exists, else create new)
+            Enrolment enrolment;
+            if (existingOpt.isPresent()) {
+                enrolment = existingOpt.get();
+                enrolment.setStatus(Enrolment.EnrolmentStatus.ACTIVE);
+                enrolment.setDroppedAt(null);
+                enrolment.setEnrolledAt(java.time.LocalDateTime.now());
+            } else {
+                enrolment = new Enrolment(studentId, courseCode, student.getName(), course.getCourseTitle());
+            }
             enrolmentRepository.save(enrolment);
 
             // Update capacity
