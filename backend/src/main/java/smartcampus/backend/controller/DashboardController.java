@@ -6,7 +6,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import smartcampus.backend.model.User;
 import smartcampus.backend.model.UserSession;
+import smartcampus.backend.model.RoomBooking;
+import smartcampus.backend.model.BookLoan;
 import smartcampus.backend.repository.*;
+
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -74,8 +77,9 @@ public class DashboardController {
             adminDash.put("fullName", session.getFullName());
             adminDash.put("totalStudents",      studentRepository.count());
             adminDash.put("totalEnrolments",    enrolmentRepository.count());
-            adminDash.put("totalRoomBookings",  roomBookingRepository.count());
-            adminDash.put("totalBookLoans",     bookLoanRepository.count());
+            adminDash.put("totalRoomBookings",  roomBookingRepository.countByStatus(RoomBooking.BookingStatus.CONFIRMED));
+            adminDash.put("totalBookLoans",     bookLoanRepository.countByStatus(BookLoan.LoanStatus.BORROWED) + bookLoanRepository.countByStatus(BookLoan.LoanStatus.OVERDUE));
+
             adminDash.put("totalNotifications", notificationRepository.count());
             adminDash.put("allBookLoans",       bookLoanRepository.findAll());
             adminDash.put("allRoomBookings",    roomBookingRepository.findAll());
