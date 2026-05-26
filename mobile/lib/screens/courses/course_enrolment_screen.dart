@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
-import '../../services/api_service.dart';
 import '../../services/user_service.dart';
+import '../../services/course_service.dart';
 import '../../widgets/app_drawer.dart';
+import '../../models/course.dart';
+import 'widgets/course_card.dart';
+import 'widgets/student_enrolment_header.dart';
+import 'widgets/course_dialogs.dart';
 
 class CourseEnrolmentScreen extends StatefulWidget {
   const CourseEnrolmentScreen({super.key});
@@ -13,7 +17,7 @@ class CourseEnrolmentScreen extends StatefulWidget {
 }
 
 class _CourseEnrolmentScreenState extends State<CourseEnrolmentScreen> {
-  List<dynamic> _allCourses = [];
+  List<Course> _allCourses = [];
   List<dynamic> _myEnrolments = [];
   Map<String, dynamic>? _studentProfile;
   bool _isLoading = false;
@@ -46,8 +50,8 @@ class _CourseEnrolmentScreenState extends State<CourseEnrolmentScreen> {
     try {
       final auth = context.read<AuthProvider>();
 
-      // 1. Fetch all courses in the system
-      final coursesResponse = await ApiService.get('/courses') as List;
+      // 1. Fetch all courses in the system using CourseService
+      final coursesResponse = await CourseService.getCourses();
 
       // 2. Fetch student dashboard data if student
       List<dynamic> myEnrolments = [];
@@ -110,7 +114,6 @@ class _CourseEnrolmentScreenState extends State<CourseEnrolmentScreen> {
       return;
     }
 
-    // Confirm Box
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -167,25 +170,26 @@ class _CourseEnrolmentScreenState extends State<CourseEnrolmentScreen> {
     if (!mounted) return;
     setState(() => _isLoading = true);
     try {
-      final body = {'studentId': _studentDbId, 'courseCode': courseCode};
-
-      final response = await ApiService.post('/enrol', body);
+      final response = await CourseService.enrollCourse(
+        studentId: _studentDbId!,
+        courseCode: courseCode,
+      );
       if (!mounted) return;
-      if (response is Map && response['success'] == true) {
+      if (response['success'] == true) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(response['message'] ?? 'Successfully enrolled!'),
             backgroundColor: const Color(0xFF00BFA5),
           ),
         );
-      } else if (response is Map && response.containsKey('error')) {
+      } else if (response.containsKey('error')) {
         throw Exception(response['error']);
       } else {
         throw Exception(
           'Enrolment failed. Course might be full or credits exceeded.',
         );
       }
-      _fetchData(); // Refresh list and active enrollments
+      _fetchData();
     } catch (e) {
       if (!mounted) return;
       setState(() => _isLoading = false);
@@ -248,11 +252,12 @@ class _CourseEnrolmentScreenState extends State<CourseEnrolmentScreen> {
     if (!mounted) return;
     setState(() => _isLoading = true);
     try {
-      final response = await ApiService.delete(
-        '/enrol/$_studentDbId/$courseCode',
+      final response = await CourseService.dropCourse(
+        studentId: _studentDbId!,
+        courseCode: courseCode,
       );
       if (!mounted) return;
-      if (response is Map && response['success'] == true) {
+      if (response['success'] == true) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
@@ -261,7 +266,7 @@ class _CourseEnrolmentScreenState extends State<CourseEnrolmentScreen> {
             backgroundColor: const Color(0xFF00BFA5),
           ),
         );
-      } else if (response is Map && response.containsKey('error')) {
+      } else if (response.containsKey('error')) {
         throw Exception(response['error']);
       }
       _fetchData();
@@ -279,334 +284,27 @@ class _CourseEnrolmentScreenState extends State<CourseEnrolmentScreen> {
 
   // Handle Admin Add New Course
   void _showAddCourseDialog() {
-    final codeController = TextEditingController();
-    final titleController = TextEditingController();
-    final lecturerController = TextEditingController();
-    final facultyController = TextEditingController();
-    final creditsController = TextEditingController();
-    final capacityController = TextEditingController();
-    final semesterController = TextEditingController(text: "1");
-
     showDialog(
       context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (context, setStateDialog) => AlertDialog(
-          backgroundColor: const Color(0xFF1E1E1E),
-          title: const Text(
-            'Register New Course',
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-          ),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: codeController,
-                  decoration: const InputDecoration(
-                    labelText: 'Course Code (e.g. BITP3123)',
-                    labelStyle: TextStyle(color: Colors.white70),
-                  ),
-                  style: const TextStyle(color: Colors.white),
-                ),
-                TextField(
-                  controller: titleController,
-                  decoration: const InputDecoration(
-                    labelText: 'Course Title',
-                    labelStyle: TextStyle(color: Colors.white70),
-                  ),
-                  style: const TextStyle(color: Colors.white),
-                ),
-                TextField(
-                  controller: lecturerController,
-                  decoration: const InputDecoration(
-                    labelText: 'Lecturer Name',
-                    labelStyle: TextStyle(color: Colors.white70),
-                  ),
-                  style: const TextStyle(color: Colors.white),
-                ),
-                TextField(
-                  controller: facultyController,
-                  decoration: const InputDecoration(
-                    labelText: 'Faculty (e.g. FTMK)',
-                    labelStyle: TextStyle(color: Colors.white70),
-                  ),
-                  style: const TextStyle(color: Colors.white),
-                ),
-                TextField(
-                  controller: creditsController,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(
-                    labelText: 'Credit Hours',
-                    labelStyle: TextStyle(color: Colors.white70),
-                  ),
-                  style: const TextStyle(color: Colors.white),
-                ),
-                TextField(
-                  controller: capacityController,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(
-                    labelText: 'Max Capacity / Seats',
-                    labelStyle: TextStyle(color: Colors.white70),
-                  ),
-                  style: const TextStyle(color: Colors.white),
-                ),
-                TextField(
-                  controller: semesterController,
-                  decoration: const InputDecoration(
-                    labelText: 'Semester',
-                    labelStyle: TextStyle(color: Colors.white70),
-                  ),
-                  style: const TextStyle(color: Colors.white),
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(),
-              child: const Text(
-                'Cancel',
-                style: TextStyle(color: Colors.white54),
-              ),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF3F51B5),
-              ),
-              onPressed: () async {
-                final code = codeController.text.trim();
-                final title = titleController.text.trim();
-                final lecturer = lecturerController.text.trim();
-                final faculty = facultyController.text.trim();
-                final credits = int.tryParse(creditsController.text) ?? 3;
-                final capacity = int.tryParse(capacityController.text) ?? 30;
-                final semester = semesterController.text.trim();
-
-                if (code.isEmpty || title.isEmpty || lecturer.isEmpty) return;
-
-                final courseData = {
-                  'courseCode': code,
-                  'courseTitle': title,
-                  'lecturer': lecturer,
-                  'faculty': faculty,
-                  'creditHours': credits,
-                  'maxCapacity': capacity,
-                  'semester': semester,
-                  'currentCapacity': 0,
-                  'enrolledCount': 0,
-                };
-
-                try {
-                  final response = await ApiService.post(
-                    '/courses',
-                    courseData,
-                  );
-                  if (response is Map && response.containsKey('error')) {
-                    throw Exception(response['error']);
-                  }
-                  if (ctx.mounted) Navigator.of(ctx).pop();
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('New course added successfully!'),
-                        backgroundColor: Color(0xFF00BFA5),
-                      ),
-                    );
-                    _fetchData();
-                  }
-                } catch (e) {
-                  if (ctx.mounted) {
-                    ScaffoldMessenger.of(ctx).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          'Error: ${e.toString().replaceAll("Exception: ", "")}',
-                        ),
-                        backgroundColor: Colors.redAccent,
-                      ),
-                    );
-                  }
-                }
-              },
-              child: const Text(
-                'Add Course',
-                style: TextStyle(color: Colors.white),
-              ),
-            ),
-          ],
-        ),
+      builder: (ctx) => AddCourseDialog(
+        onAdd: (courseData) async {
+          await CourseService.addCourse(courseData);
+          _fetchData();
+        },
       ),
     );
   }
 
   // Handle Admin Edit Course Details
-  void _showEditCourseDialog(dynamic course) {
-    final id = course['id'];
-    final codeController = TextEditingController(text: course['courseCode']);
-    final titleController = TextEditingController(text: course['courseTitle']);
-    final lecturerController = TextEditingController(text: course['lecturer']);
-    final facultyController = TextEditingController(
-      text: course['faculty'] ?? '',
-    );
-    final creditsController = TextEditingController(
-      text: (course['creditHours'] ?? 3).toString(),
-    );
-    final capacityController = TextEditingController(
-      text: (course['maxCapacity'] ?? 30).toString(),
-    );
-    final semesterController = TextEditingController(
-      text: course['semester'] ?? '1',
-    );
-
+  void _showEditCourseDialog(Course course) {
     showDialog(
       context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (context, setStateDialog) => AlertDialog(
-          backgroundColor: const Color(0xFF1E1E1E),
-          title: Text(
-            'Edit Course: ${course['courseCode']}',
-            style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: codeController,
-                  readOnly: true, // Course Code is immutable
-                  decoration: const InputDecoration(
-                    labelText: 'Course Code (Read-Only)',
-                    labelStyle: TextStyle(color: Colors.white38),
-                    enabledBorder: UnderlineInputBorder(
-                      borderSide: BorderSide(color: Colors.white10),
-                    ),
-                  ),
-                  style: const TextStyle(color: Colors.white38),
-                ),
-                TextField(
-                  controller: titleController,
-                  decoration: const InputDecoration(
-                    labelText: 'Course Title',
-                    labelStyle: TextStyle(color: Colors.white70),
-                  ),
-                  style: const TextStyle(color: Colors.white),
-                ),
-                TextField(
-                  controller: lecturerController,
-                  decoration: const InputDecoration(
-                    labelText: 'Lecturer Name',
-                    labelStyle: TextStyle(color: Colors.white70),
-                  ),
-                  style: const TextStyle(color: Colors.white),
-                ),
-                TextField(
-                  controller: facultyController,
-                  decoration: const InputDecoration(
-                    labelText: 'Faculty (e.g. FTMK)',
-                    labelStyle: TextStyle(color: Colors.white70),
-                  ),
-                  style: const TextStyle(color: Colors.white),
-                ),
-                TextField(
-                  controller: creditsController,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(
-                    labelText: 'Credit Hours',
-                    labelStyle: TextStyle(color: Colors.white70),
-                  ),
-                  style: const TextStyle(color: Colors.white),
-                ),
-                TextField(
-                  controller: capacityController,
-                  keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(
-                    labelText: 'Max Capacity / Seats',
-                    labelStyle: TextStyle(color: Colors.white70),
-                  ),
-                  style: const TextStyle(color: Colors.white),
-                ),
-                TextField(
-                  controller: semesterController,
-                  decoration: const InputDecoration(
-                    labelText: 'Semester',
-                    labelStyle: TextStyle(color: Colors.white70),
-                  ),
-                  style: const TextStyle(color: Colors.white),
-                ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(),
-              child: const Text(
-                'Cancel',
-                style: TextStyle(color: Colors.white54),
-              ),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF00BFA5),
-              ),
-              onPressed: () async {
-                final title = titleController.text.trim();
-                final lecturer = lecturerController.text.trim();
-                final faculty = facultyController.text.trim();
-                final credits = int.tryParse(creditsController.text) ?? 3;
-                final capacity = int.tryParse(capacityController.text) ?? 30;
-                final semester = semesterController.text.trim();
-
-                if (title.isEmpty || lecturer.isEmpty) return;
-
-                final courseData = {
-                  'courseTitle': title,
-                  'lecturer': lecturer,
-                  'faculty': faculty,
-                  'creditHours': credits,
-                  'maxCapacity': capacity,
-                  'semester': semester,
-                };
-
-                try {
-                  final response = await ApiService.put(
-                    '/courses/$id',
-                    courseData,
-                  );
-                  if (response is Map && response.containsKey('error')) {
-                    throw Exception(response['error']);
-                  }
-                  if (ctx.mounted) Navigator.of(ctx).pop();
-                  if (mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Course updated successfully!'),
-                        backgroundColor: Color(0xFF00BFA5),
-                      ),
-                    );
-                    _fetchData();
-                  }
-                } catch (e) {
-                  if (ctx.mounted) {
-                    ScaffoldMessenger.of(ctx).showSnackBar(
-                      SnackBar(
-                        content: Text(
-                          'Error: ${e.toString().replaceAll("Exception: ", "")}',
-                        ),
-                        backgroundColor: Colors.redAccent,
-                      ),
-                    );
-                  }
-                }
-              },
-              child: const Text(
-                'Save Changes',
-                style: TextStyle(color: Colors.white),
-              ),
-            ),
-          ],
-        ),
+      builder: (ctx) => EditCourseDialog(
+        course: course,
+        onSave: (courseData) async {
+          await CourseService.updateCourse(course.id, courseData);
+          _fetchData();
+        },
       ),
     );
   }
@@ -647,10 +345,7 @@ class _CourseEnrolmentScreenState extends State<CourseEnrolmentScreen> {
     if (!mounted) return;
     setState(() => _isLoading = true);
     try {
-      final response = await ApiService.delete('/courses/$id');
-      if (response is Map && response.containsKey('error')) {
-        throw Exception(response['error']);
-      }
+      await CourseService.deleteCourse(id);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -679,10 +374,10 @@ class _CourseEnrolmentScreenState extends State<CourseEnrolmentScreen> {
     var filteredCourses = _allCourses.where((course) {
       final query = _searchQuery.toLowerCase();
       if (query.isEmpty) return true;
-      final code = (course['courseCode'] ?? '').toString().toLowerCase();
-      final title = (course['courseTitle'] ?? '').toString().toLowerCase();
-      final lecturer = (course['lecturer'] ?? '').toString().toLowerCase();
-      final faculty = (course['faculty'] ?? '').toString().toLowerCase();
+      final code = course.courseCode.toLowerCase();
+      final title = course.courseTitle.toLowerCase();
+      final lecturer = course.lecturer.toLowerCase();
+      final faculty = (course.faculty ?? '').toLowerCase();
 
       return code.contains(query) ||
           title.contains(query) ||
@@ -693,11 +388,11 @@ class _CourseEnrolmentScreenState extends State<CourseEnrolmentScreen> {
     if (isStudent) {
       if (_enrolmentFilter == 'ENROLLED') {
         filteredCourses = filteredCourses
-            .where((course) => _isEnrolled(course['courseCode']))
+            .where((course) => _isEnrolled(course.courseCode))
             .toList();
       } else if (_enrolmentFilter == 'NOT_ENROLLED') {
         filteredCourses = filteredCourses
-            .where((course) => !_isEnrolled(course['courseCode']))
+            .where((course) => !_isEnrolled(course.courseCode))
             .toList();
       }
     }
@@ -738,72 +433,10 @@ class _CourseEnrolmentScreenState extends State<CourseEnrolmentScreen> {
                 children: [
                   // ---- Header Profile (Only for Student) ----
                   if (isStudent && _studentProfile != null) ...[
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFF1E1E1E), Color(0xFF2C2C2C)],
-                        ),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.white10),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                _studentProfile?['programme'] ??
-                                    'Enrolled Student',
-                                style: const TextStyle(
-                                  color: Color(0xFF00BFA5),
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              Text(
-                                'Sem: ${_studentProfile?['semester'] ?? '1'}',
-                                style: const TextStyle(
-                                  color: Colors.white70,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            auth.fullName ?? '',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                'My Active Courses: ${_myEnrolments.length}',
-                                style: const TextStyle(
-                                  color: Colors.white70,
-                                  fontSize: 13,
-                                ),
-                              ),
-                              Text(
-                                'GPA: ${_studentProfile?['gpa']?.toString() ?? 'N/A'}',
-                                style: const TextStyle(
-                                  color: Colors.white70,
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
+                    StudentEnrolmentHeader(
+                      studentProfile: _studentProfile!,
+                      fullName: auth.fullName ?? '',
+                      activeCoursesCount: _myEnrolments.length,
                     ),
                     const SizedBox(height: 16),
                   ],
@@ -951,318 +584,16 @@ class _CourseEnrolmentScreenState extends State<CourseEnrolmentScreen> {
                             itemCount: filteredCourses.length,
                             itemBuilder: (context, index) {
                               final course = filteredCourses[index];
-                              final String code = course['courseCode'];
-                              final String title = course['courseTitle'];
-                              final String lecturer = course['lecturer'];
-                              final String faculty =
-                                  course['faculty'] ?? 'FTMK';
-                              final int credits = course['creditHours'] ?? 3;
-                              final int capacity = course['maxCapacity'] ?? 30;
-                              final int enrolled =
-                                  course['currentCapacity'] ??
-                                  course['enrolledCount'] ??
-                                  0;
-                              final int remainingSeats = capacity - enrolled;
-                              final bool enrolledStatus = _isEnrolled(code);
+                              final enrolledStatus = _isEnrolled(course.courseCode);
 
-                              return Card(
-                                color: const Color(0xFF1E1E1E),
-                                margin: const EdgeInsets.only(bottom: 12),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(12),
-                                  side: BorderSide(
-                                    color: enrolledStatus
-                                        ? const Color(
-                                            0xFF00BFA5,
-                                          ).withOpacity(0.3)
-                                        : Colors.white10,
-                                    width: enrolledStatus ? 1.5 : 1.0,
-                                  ),
-                                ),
-                                child: InkWell(
-                                  borderRadius: BorderRadius.circular(12),
-                                  onTap: !isStudent
-                                      ? () => _showEditCourseDialog(course)
-                                      : null,
-                                  child: Padding(
-                                    padding: const EdgeInsets.all(16.0),
-                                    child: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Row(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Expanded(
-                                              child: Column(
-                                                crossAxisAlignment:
-                                                    CrossAxisAlignment.start,
-                                                children: [
-                                                  Text(
-                                                    '$code - $faculty',
-                                                    style: const TextStyle(
-                                                      color: Color(0xFF00BFA5),
-                                                      fontSize: 12,
-                                                      fontWeight:
-                                                          FontWeight.bold,
-                                                      letterSpacing: 1.1,
-                                                    ),
-                                                  ),
-                                                  const SizedBox(height: 4),
-                                                  Text(
-                                                    title,
-                                                    style: const TextStyle(
-                                                      color: Colors.white,
-                                                      fontSize: 16,
-                                                      fontWeight:
-                                                          FontWeight.bold,
-                                                    ),
-                                                  ),
-                                                  if (isStudent) ...[
-                                                    const SizedBox(height: 6),
-                                                    Container(
-                                                      padding:
-                                                          const EdgeInsets.symmetric(
-                                                            horizontal: 8,
-                                                            vertical: 3,
-                                                          ),
-                                                      decoration: BoxDecoration(
-                                                        color: enrolledStatus
-                                                            ? const Color(
-                                                                0xFF00BFA5,
-                                                              ).withOpacity(
-                                                                0.15,
-                                                              )
-                                                            : Colors.white
-                                                                  .withOpacity(
-                                                                    0.05,
-                                                                  ),
-                                                        borderRadius:
-                                                            BorderRadius.circular(
-                                                              6,
-                                                            ),
-                                                        border: Border.all(
-                                                          color: enrolledStatus
-                                                              ? const Color(
-                                                                  0xFF00BFA5,
-                                                                ).withOpacity(
-                                                                  0.3,
-                                                                )
-                                                              : Colors.white10,
-                                                          width: 0.8,
-                                                        ),
-                                                      ),
-                                                      child: Row(
-                                                        mainAxisSize:
-                                                            MainAxisSize.min,
-                                                        children: [
-                                                          Icon(
-                                                            enrolledStatus
-                                                                ? Icons
-                                                                      .check_circle_rounded
-                                                                : Icons
-                                                                      .radio_button_unchecked_rounded,
-                                                            color:
-                                                                enrolledStatus
-                                                                ? const Color(
-                                                                    0xFF00BFA5,
-                                                                  )
-                                                                : Colors
-                                                                      .white30,
-                                                            size: 13,
-                                                          ),
-                                                          const SizedBox(
-                                                            width: 6,
-                                                          ),
-                                                          Text(
-                                                            enrolledStatus
-                                                                ? 'Enrolled / Sudah Enrol'
-                                                                : 'Not Enrolled / Belum Enrol',
-                                                            style: TextStyle(
-                                                              color:
-                                                                  enrolledStatus
-                                                                  ? const Color(
-                                                                      0xFF00BFA5,
-                                                                    )
-                                                                  : Colors
-                                                                        .white38,
-                                                              fontSize: 11,
-                                                              fontWeight:
-                                                                  FontWeight
-                                                                      .bold,
-                                                            ),
-                                                          ),
-                                                        ],
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ],
-                                              ),
-                                            ),
-                                            // ---- Capacity Seats Badge ----
-                                            Container(
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                    horizontal: 8,
-                                                    vertical: 4,
-                                                  ),
-                                              decoration: BoxDecoration(
-                                                color: remainingSeats > 0
-                                                    ? Colors.white.withOpacity(
-                                                        0.05,
-                                                      )
-                                                    : Colors.redAccent
-                                                          .withOpacity(0.15),
-                                                borderRadius:
-                                                    BorderRadius.circular(8),
-                                              ),
-                                              child: Text(
-                                                remainingSeats > 0
-                                                    ? '$remainingSeats / $capacity Seats Left'
-                                                    : 'FULL',
-                                                style: TextStyle(
-                                                  color: remainingSeats > 0
-                                                      ? Colors.white70
-                                                      : Colors.redAccent,
-                                                  fontSize: 10,
-                                                  fontWeight: FontWeight.bold,
-                                                ),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                        const SizedBox(height: 10),
-                                        Text(
-                                          'Lecturer: $lecturer',
-                                          style: const TextStyle(
-                                            color: Colors.white70,
-                                            fontSize: 13,
-                                          ),
-                                        ),
-                                        Text(
-                                          'Credits: $credits Hours',
-                                          style: const TextStyle(
-                                            color: Colors.white54,
-                                            fontSize: 13,
-                                          ),
-                                        ),
-                                        const Divider(
-                                          color: Colors.white10,
-                                          height: 20,
-                                        ),
-
-                                        // ---- Enroll / Drop Actions ----
-                                        Row(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.spaceBetween,
-                                          children: [
-                                            Text(
-                                              'Semester: ${course['semester'] ?? '1'}',
-                                              style: const TextStyle(
-                                                color: Colors.white30,
-                                                fontSize: 12,
-                                                fontFamily: 'monospace',
-                                              ),
-                                            ),
-                                            if (isStudent)
-                                              enrolledStatus
-                                                  ? ElevatedButton(
-                                                      style: ElevatedButton.styleFrom(
-                                                        backgroundColor: Colors
-                                                            .redAccent
-                                                            .withOpacity(0.15),
-                                                        foregroundColor:
-                                                            Colors.redAccent,
-                                                        side: const BorderSide(
-                                                          color:
-                                                              Colors.redAccent,
-                                                          width: 0.5,
-                                                        ),
-                                                        shape: RoundedRectangleBorder(
-                                                          borderRadius:
-                                                              BorderRadius.circular(
-                                                                8,
-                                                              ),
-                                                        ),
-                                                      ),
-                                                      onPressed: () =>
-                                                          _dropCourse(code),
-                                                      child: const Text(
-                                                        'DROP COURSE',
-                                                        style: TextStyle(
-                                                          fontWeight:
-                                                              FontWeight.bold,
-                                                          fontSize: 12,
-                                                        ),
-                                                      ),
-                                                    )
-                                                  : ElevatedButton(
-                                                      style: ElevatedButton.styleFrom(
-                                                        backgroundColor:
-                                                            const Color(
-                                                              0xFF3F51B5,
-                                                            ),
-                                                        foregroundColor:
-                                                            Colors.white,
-                                                        shape: RoundedRectangleBorder(
-                                                          borderRadius:
-                                                              BorderRadius.circular(
-                                                                8,
-                                                              ),
-                                                        ),
-                                                      ),
-                                                      onPressed:
-                                                          remainingSeats > 0
-                                                          ? () => _enrollCourse(
-                                                              code,
-                                                            )
-                                                          : null,
-                                                      child: const Text(
-                                                        'ENROL',
-                                                        style: TextStyle(
-                                                          fontWeight:
-                                                              FontWeight.bold,
-                                                          fontSize: 12,
-                                                        ),
-                                                      ),
-                                                    )
-                                            else
-                                              Row(
-                                                mainAxisSize: MainAxisSize.min,
-                                                children: [
-                                                  IconButton(
-                                                    icon: const Icon(
-                                                      Icons.edit_rounded,
-                                                      color: Color(0xFF00BFA5),
-                                                    ),
-                                                    tooltip: 'Edit Course',
-                                                    onPressed: () =>
-                                                        _showEditCourseDialog(
-                                                          course,
-                                                        ),
-                                                  ),
-                                                  IconButton(
-                                                    icon: const Icon(
-                                                      Icons
-                                                          .delete_outline_rounded,
-                                                      color: Colors.redAccent,
-                                                    ),
-                                                    tooltip: 'Delete Course',
-                                                    onPressed: () =>
-                                                        _deleteCourse(
-                                                          course['id'],
-                                                          code,
-                                                        ),
-                                                  ),
-                                                ],
-                                              ),
-                                          ],
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
+                              return CourseCard(
+                                course: course,
+                                isStudent: isStudent,
+                                enrolledStatus: enrolledStatus,
+                                onEnroll: () => _enrollCourse(course.courseCode),
+                                onDrop: () => _dropCourse(course.courseCode),
+                                onEdit: () => _showEditCourseDialog(course),
+                                onDelete: () => _deleteCourse(course.id, course.courseCode),
                               );
                             },
                           ),
