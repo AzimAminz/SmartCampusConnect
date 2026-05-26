@@ -19,6 +19,9 @@ public interface RoomBookingRepository extends JpaRepository<RoomBooking, Long> 
 
     List<RoomBooking> findByStudentId(String studentId);
 
+    long countByStatus(RoomBooking.BookingStatus status);
+
+
     /** Check if a given room+slot+date combination is already booked (for SOAP double-booking fault) */
     boolean existsByRoomNameAndSlotAndBookingDateAndStatus(
             String roomName, String slot, LocalDate bookingDate, RoomBooking.BookingStatus status);
