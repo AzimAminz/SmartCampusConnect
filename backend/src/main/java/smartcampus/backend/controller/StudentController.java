@@ -6,22 +6,11 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import smartcampus.backend.model.Student;
 import smartcampus.backend.repository.StudentRepository;
+import smartcampus.backend.service.StudentService;
 
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-/**
- * Student Profile REST API — satisfies R3 (SOA), R7 (REST CRUD).
- *
- * Endpoints:
- *   GET    /api/students           — List all students
- *   GET    /api/students/{id}      — Get student by DB id
- *   GET    /api/students/sid/{sid} — Get student by studentId (e.g. B032310001)
- *   POST   /api/students           — Create new student
- *   PUT    /api/students/{id}      — Update student
- *   DELETE /api/students/{id}      — Delete student
- */
 @RestController
 @RequestMapping("/api/students")
 @CrossOrigin(origins = "*")
@@ -29,15 +18,18 @@ public class StudentController {
 
     @Autowired
     private StudentRepository studentRepository;
+    
+    @Autowired
+    private StudentService studentService;
 
-    // GET /api/students
+    // GET /api/students - List all
     @GetMapping
-    public ResponseEntity<List<Student>> getAll() {
+    public ResponseEntity<?> getAll() {
         return ResponseEntity.ok(studentRepository.findAll());
     }
 
-    // GET /api/students/{id}
-    @GetMapping("/{id}")
+    // GET /api/students/id/{id} - Get by database ID (internal use)
+    @GetMapping("/id/{id}")
     public ResponseEntity<?> getById(@PathVariable Long id) {
         Optional<Student> student = studentRepository.findById(id);
         if (student.isPresent()) {
@@ -47,8 +39,8 @@ public class StudentController {
                 .body(Map.of("error", "Student not found with id: " + id));
     }
 
-    // GET /api/students/sid/{studentId}
-    @GetMapping("/sid/{studentId}")
+    // GET /api/students/{studentId} - Get by studentId (public use)
+    @GetMapping("/{studentId}")
     public ResponseEntity<?> getByStudentId(@PathVariable String studentId) {
         Optional<Student> student = studentRepository.findByStudentId(studentId);
         if (student.isPresent()) {
@@ -58,48 +50,126 @@ public class StudentController {
                 .body(Map.of("error", "Student not found: " + studentId));
     }
 
-    // POST /api/students
+    // POST /api/students - CREATE
     @PostMapping
-    public ResponseEntity<?> create(@RequestBody Student student) {
-        if (studentRepository.existsByStudentId(student.getStudentId())) {
-            return ResponseEntity.status(HttpStatus.CONFLICT)
-                    .body(Map.of("error", "Student ID already exists: " + student.getStudentId()));
+    public ResponseEntity<?> create(@RequestBody CreateStudentRequest request) {
+        try {
+            Student saved = studentService.createStudent(
+                request.getName(),
+                request.getEmail(),
+                request.getProgrammeCode(),
+                request.getFaculty(),
+                request.getSemester(),
+                request.getProgramme(),
+                request.getGpa(),
+                request.getPhoneNumber()
+            );
+            return ResponseEntity.status(HttpStatus.CREATED).body(saved);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", e.getMessage()));
         }
-        if (studentRepository.existsByEmail(student.getEmail())) {
-            return ResponseEntity.status(HttpStatus.CONFLICT)
-                    .body(Map.of("error", "Email already registered: " + student.getEmail()));
-        }
-        Student saved = studentRepository.save(student);
-        return ResponseEntity.status(HttpStatus.CREATED).body(saved);
     }
 
-    // PUT /api/students/{id}
+    // PUT /api/students/id/{id} - UPDATE by database ID
     @PutMapping("/{id}")
-    public ResponseEntity<?> update(@PathVariable Long id, @RequestBody Student updated) {
-        Optional<Student> studentOpt = studentRepository.findById(id);
-        if (!studentOpt.isPresent()) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(Map.of("error", "Student not found: " + id));
+    public ResponseEntity<?> updateById(
+            @PathVariable Long id, 
+            @RequestBody UpdateStudentRequest request) {
+        try {
+            Student updated = studentService.updateStudent(
+                id,
+                request.getName(),
+                request.getEmail(),
+                request.getProgramme(),
+                request.getFaculty(),
+                request.getSemester(),
+                request.getGpa(),
+                request.getPhoneNumber()
+            );
+            return ResponseEntity.ok(updated);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", e.getMessage()));
         }
-        Student student = studentOpt.get();
-        if (updated.getName() != null)        student.setName(updated.getName());
-        if (updated.getEmail() != null)       student.setEmail(updated.getEmail());
-        if (updated.getProgramme() != null)   student.setProgramme(updated.getProgramme());
-        if (updated.getFaculty() != null)     student.setFaculty(updated.getFaculty());
-        if (updated.getSemester() != null)    student.setSemester(updated.getSemester());
-        if (updated.getGpa() != null)         student.setGpa(updated.getGpa());
-        if (updated.getPhoneNumber() != null) student.setPhoneNumber(updated.getPhoneNumber());
-        return ResponseEntity.ok(studentRepository.save(student));
+    }
+    
+
+    // DELETE /api/students/id/{id} - DELETE by database ID
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> deleteById(@PathVariable Long id) {
+        try {
+            studentService.deleteStudent(id);
+            return ResponseEntity.ok(Map.of("message", "Student deleted successfully"));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", e.getMessage()));
+        }
     }
 
-    // DELETE /api/students/{id}
-    @DeleteMapping("/{id}")
-    public ResponseEntity<?> delete(@PathVariable Long id) {
-        if (!studentRepository.existsById(id)) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(Map.of("error", "Student not found: " + id));
-        }
-        studentRepository.deleteById(id);
-        return ResponseEntity.ok(Map.of("message", "Student deleted successfully"));
+    
+  
+    // Request DTOs
+    static class CreateStudentRequest {
+        private String name;
+        private String email;
+        private String programmeCode;
+        private String faculty;
+        private String semester;
+        private String programme;
+        private Double gpa;
+        private String phoneNumber;
+        
+        // Getters
+        public String getName() { return name; }
+        public String getEmail() { return email; }
+        public String getProgrammeCode() { return programmeCode; }
+        public String getFaculty() { return faculty; }
+        public String getSemester() { return semester; }
+        public String getProgramme() { return programme; }
+        public Double getGpa() { return gpa; }
+        public String getPhoneNumber() { return phoneNumber; }
+        
+        // Setters
+        public void setName(String name) { this.name = name; }
+        public void setEmail(String email) { this.email = email; }
+        public void setProgrammeCode(String programmeCode) { this.programmeCode = programmeCode; }
+        public void setFaculty(String faculty) { this.faculty = faculty; }
+        public void setSemester(String semester) { this.semester = semester; }
+        public void setProgramme(String programme) { this.programme = programme; }
+        public void setGpa(Double gpa) { this.gpa = gpa; }
+        public void setPhoneNumber(String phoneNumber) { this.phoneNumber = phoneNumber; }
+    }
+    
+    static class UpdateStudentRequest {
+        private String name;
+        private String email;
+        private String programme;
+        private String faculty;
+        private String semester;
+        private Double gpa;
+        private String phoneNumber;
+        
+        // Getters and setters
+        public String getName() { return name; }
+        public void setName(String name) { this.name = name; }
+        
+        public String getEmail() { return email; }
+        public void setEmail(String email) { this.email = email; }
+        
+        public String getProgramme() { return programme; }
+        public void setProgramme(String programme) { this.programme = programme; }
+        
+        public String getFaculty() { return faculty; }
+        public void setFaculty(String faculty) { this.faculty = faculty; }
+        
+        public String getSemester() { return semester; }
+        public void setSemester(String semester) { this.semester = semester; }
+        
+        public Double getGpa() { return gpa; }
+        public void setGpa(Double gpa) { this.gpa = gpa; }
+        
+        public String getPhoneNumber() { return phoneNumber; }
+        public void setPhoneNumber(String phoneNumber) { this.phoneNumber = phoneNumber; }
     }
 }
