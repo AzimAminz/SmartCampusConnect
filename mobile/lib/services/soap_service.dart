@@ -8,6 +8,114 @@ class SoapService {
   static const String soapUrl = "http://localhost:8085/ws/booking";
 
   /**
+   * Operation A: bookRoom
+   * Creates a room booking.
+   */
+  static Future<String> bookRoom({
+    required String studentId,
+    required String studentName,
+    required String roomName,
+    required String slot,
+    required String date,
+    required String purpose,
+  }) async {
+    final xmlPayload = '''
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ser="http://service.smartcampus/">
+   <soapenv:Header/>
+   <soapenv:Body>
+      <ser:bookRoom>
+         <studentId>$studentId</studentId>
+         <studentName>$studentName</studentName>
+         <roomName>$roomName</roomName>
+         <slot>$slot</slot>
+         <date>$date</date>
+         <purpose>$purpose</purpose>
+      </ser:bookRoom>
+   </soapenv:Body>
+</soapenv:Envelope>
+''';
+
+    final response = await http.post(
+      Uri.parse(soapUrl),
+      headers: {"Content-Type": "text/xml; charset=utf-8"},
+      body: utf8.encode(xmlPayload),
+    );
+
+    _checkSoapFault(response.body, response.statusCode);
+
+    final document = xml.XmlDocument.parse(response.body);
+    final returnNode = document.findAllElements('return').firstOrNull;
+    if (returnNode == null) {
+      throw Exception("Invalid bookRoom SOAP response.");
+    }
+    return returnNode.innerText; // Returns reference ID, e.g. BK-XXXXXXXX
+  }
+
+  /**
+   * Operation B: checkAvailability
+   * Checks if a room slot is available.
+   */
+  static Future<bool> checkAvailability({
+    required String roomName,
+    required String slot,
+    required String date,
+  }) async {
+    final xmlPayload = '''
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ser="http://service.smartcampus/">
+   <soapenv:Header/>
+   <soapenv:Body>
+      <ser:checkAvailability>
+         <roomName>$roomName</roomName>
+         <slot>$slot</slot>
+         <date>$date</date>
+      </ser:checkAvailability>
+   </soapenv:Body>
+</soapenv:Envelope>
+''';
+
+    final response = await http.post(
+      Uri.parse(soapUrl),
+      headers: {"Content-Type": "text/xml; charset=utf-8"},
+      body: utf8.encode(xmlPayload),
+    );
+
+    _checkSoapFault(response.body, response.statusCode);
+
+    final document = xml.XmlDocument.parse(response.body);
+    final returnNode = document.findAllElements('return').firstOrNull;
+    return returnNode?.innerText == 'true';
+  }
+
+  /**
+   * Operation C: cancelBooking
+   * Cancels a room booking.
+   */
+  static Future<bool> cancelBooking(String bookingRef) async {
+    final xmlPayload = '''
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ser="http://service.smartcampus/">
+   <soapenv:Header/>
+   <soapenv:Body>
+      <ser:cancelBooking>
+         <bookingRef>$bookingRef</bookingRef>
+      </ser:cancelBooking>
+   </soapenv:Body>
+</soapenv:Envelope>
+''';
+
+    final response = await http.post(
+      Uri.parse(soapUrl),
+      headers: {"Content-Type": "text/xml; charset=utf-8"},
+      body: utf8.encode(xmlPayload),
+    );
+
+    _checkSoapFault(response.body, response.statusCode);
+
+    final document = xml.XmlDocument.parse(response.body);
+    final returnNode = document.findAllElements('return').firstOrNull;
+    return returnNode?.innerText == 'true';
+  }
+
+  /**
    * Helper to parse SOAP Fault errors from the XML response.
    */
   static void _checkSoapFault(String responseBody, int statusCode) {
@@ -249,6 +357,9 @@ class SoapService {
     final returnElements = document.findAllElements('return');
 
     return returnElements.map((element) {
+      final retDateVal = element.findElements('returnDate').firstOrNull?.innerText;
+      final retDate = (retDateVal == null || retDateVal.trim().isEmpty || retDateVal == 'null') ? null : retDateVal;
+
       return BookLoan(
         id: int.parse(element.findElements('id').first.innerText),
         loanReference: element.findElements('loanReference').first.innerText,
@@ -258,7 +369,7 @@ class SoapService {
         bookTitle: element.findElements('bookTitle').firstOrNull?.innerText,
         loanDate: element.findElements('loanDate').first.innerText,
         dueDate: element.findElements('dueDate').first.innerText,
-        returnDate: element.findElements('returnDate').firstOrNull?.innerText,
+        returnDate: retDate,
         status: element.findElements('status').first.innerText,
         fineAmount: double.parse(element.findElements('fineAmount').first.innerText),
       );
