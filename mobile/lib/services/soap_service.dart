@@ -19,7 +19,8 @@ class SoapService {
     required String date,
     required String purpose,
   }) async {
-    final xmlPayload = '''
+    final xmlPayload =
+        '''
 <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ser="http://service.smartcampus/">
    <soapenv:Header/>
    <soapenv:Body>
@@ -60,7 +61,8 @@ class SoapService {
     required String slot,
     required String date,
   }) async {
-    final xmlPayload = '''
+    final xmlPayload =
+        '''
 <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ser="http://service.smartcampus/">
    <soapenv:Header/>
    <soapenv:Body>
@@ -91,7 +93,8 @@ class SoapService {
    * Cancels a room booking.
    */
   static Future<bool> cancelBooking(String bookingRef) async {
-    final xmlPayload = '''
+    final xmlPayload =
+        '''
 <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ser="http://service.smartcampus/">
    <soapenv:Header/>
    <soapenv:Body>
@@ -139,7 +142,8 @@ class SoapService {
    * Searches books by title, author, category, or ISBN.
    */
   static Future<List<Book>> searchBooks(String query) async {
-    final xmlPayload = '''
+    final xmlPayload =
+        '''
 <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ser="http://service.smartcampus/">
    <soapenv:Header/>
    <soapenv:Body>
@@ -184,7 +188,8 @@ class SoapService {
     required String author,
     required String category,
   }) async {
-    final xmlPayload = '''
+    final xmlPayload =
+        '''
 <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ser="http://service.smartcampus/">
    <soapenv:Header/>
    <soapenv:Body>
@@ -223,7 +228,8 @@ class SoapService {
     required String isbn,
     required String dueDate, // yyyy-MM-dd
   }) async {
-    final xmlPayload = '''
+    final xmlPayload =
+        '''
 <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ser="http://service.smartcampus/">
    <soapenv:Header/>
    <soapenv:Body>
@@ -262,7 +268,8 @@ class SoapService {
     required String token,
     required String loanRef,
   }) async {
-    final xmlPayload = '''
+    final xmlPayload =
+        '''
 <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ser="http://service.smartcampus/">
    <soapenv:Header/>
    <soapenv:Body>
@@ -295,7 +302,8 @@ class SoapService {
     required String token,
     required String isbn,
   }) async {
-    final xmlPayload = '''
+    final xmlPayload =
+        '''
 <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ser="http://service.smartcampus/">
    <soapenv:Header/>
    <soapenv:Body>
@@ -326,7 +334,8 @@ class SoapService {
     required String token,
     required String studentId,
   }) async {
-    final xmlPayload = '''
+    final xmlPayload =
+        '''
 <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ser="http://service.smartcampus/">
    <soapenv:Header/>
    <soapenv:Body>
@@ -357,8 +366,16 @@ class SoapService {
     final returnElements = document.findAllElements('return');
 
     return returnElements.map((element) {
-      final retDateVal = element.findElements('returnDate').firstOrNull?.innerText;
-      final retDate = (retDateVal == null || retDateVal.trim().isEmpty || retDateVal == 'null') ? null : retDateVal;
+      final retDateVal = element
+          .findElements('returnDate')
+          .firstOrNull
+          ?.innerText;
+      final retDate =
+          (retDateVal == null ||
+              retDateVal.trim().isEmpty ||
+              retDateVal == 'null')
+          ? null
+          : retDateVal;
 
       return BookLoan(
         id: int.parse(element.findElements('id').first.innerText),
@@ -371,7 +388,9 @@ class SoapService {
         dueDate: element.findElements('dueDate').first.innerText,
         returnDate: retDate,
         status: element.findElements('status').first.innerText,
-        fineAmount: double.parse(element.findElements('fineAmount').first.innerText),
+        fineAmount: double.parse(
+          element.findElements('fineAmount').first.innerText,
+        ),
       );
     }).toList();
   }

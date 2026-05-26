@@ -120,7 +120,10 @@ class _LoginScreenState extends State<LoginScreen> {
                         decoration: InputDecoration(
                           labelText: 'Matric No / Admin ID',
                           labelStyle: const TextStyle(color: Colors.white70),
-                          prefixIcon: const Icon(Icons.person_outline, color: Color(0xFF3F51B5)),
+                          prefixIcon: const Icon(
+                            Icons.person_outline,
+                            color: Color(0xFF3F51B5),
+                          ),
                           filled: true,
                           fillColor: Colors.white.withOpacity(0.05),
                           border: OutlineInputBorder(
@@ -129,11 +132,17 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(color: Color(0xFF3F51B5), width: 1.5),
+                            borderSide: const BorderSide(
+                              color: Color(0xFF3F51B5),
+                              width: 1.5,
+                            ),
                           ),
                           errorBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
-                            borderSide: const BorderSide(color: Colors.redAccent, width: 1.0),
+                            borderSide: const BorderSide(
+                              color: Colors.redAccent,
+                              width: 1.0,
+                            ),
                           ),
                         ),
                         validator: (value) {
@@ -152,16 +161,25 @@ class _LoginScreenState extends State<LoginScreen> {
                           decoration: BoxDecoration(
                             color: Colors.redAccent.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: Colors.redAccent.withOpacity(0.3)),
+                            border: Border.all(
+                              color: Colors.redAccent.withOpacity(0.3),
+                            ),
                           ),
                           child: Row(
                             children: [
-                              const Icon(Icons.error_outline, color: Colors.redAccent, size: 20),
+                              const Icon(
+                                Icons.error_outline,
+                                color: Colors.redAccent,
+                                size: 20,
+                              ),
                               const SizedBox(width: 10),
                               Expanded(
                                 child: Text(
                                   authProvider.errorMessage!,
-                                  style: const TextStyle(color: Colors.redAccent, fontSize: 13),
+                                  style: const TextStyle(
+                                    color: Colors.redAccent,
+                                    fontSize: 13,
+                                  ),
                                 ),
                               ),
                             ],
@@ -174,8 +192,12 @@ class _LoginScreenState extends State<LoginScreen> {
                       ElevatedButton(
                         onPressed: authProvider.isLoading ? null : _submit,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF3F51B5), // Deep Indigo
-                          disabledBackgroundColor: const Color(0xFF3F51B5).withOpacity(0.5),
+                          backgroundColor: const Color(
+                            0xFF3F51B5,
+                          ), // Deep Indigo
+                          disabledBackgroundColor: const Color(
+                            0xFF3F51B5,
+                          ).withOpacity(0.5),
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(
@@ -211,7 +233,11 @@ class _LoginScreenState extends State<LoginScreen> {
               const Text(
                 'Demo Accounts:\n• Student: B032310001 to B032310005\n• Admin: ADMIN',
                 textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.white38, fontSize: 12, height: 1.5),
+                style: TextStyle(
+                  color: Colors.white38,
+                  fontSize: 12,
+                  height: 1.5,
+                ),
               ),
             ],
           ),

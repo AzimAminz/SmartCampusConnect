@@ -23,7 +23,7 @@ class _RoomBookingScreenState extends State<RoomBookingScreen> {
   String _selectedSlot = "08:00 - 10:00";
   DateTime _selectedDate = DateTime.now().add(const Duration(days: 1));
   final _purposeController = TextEditingController();
-  
+
   // Admin-specific booking overrides
   final _adminStudentIdController = TextEditingController();
   final _adminStudentNameController = TextEditingController();
@@ -37,7 +37,7 @@ class _RoomBookingScreenState extends State<RoomBookingScreen> {
     "Discussion Room Beta",
     "Programming Lab B",
     "Multipurpose Hall",
-    "Mini Seminar Room"
+    "Mini Seminar Room",
   ];
 
   final List<String> _slots = [
@@ -45,7 +45,7 @@ class _RoomBookingScreenState extends State<RoomBookingScreen> {
     "10:00 - 12:00",
     "12:00 - 14:00",
     "14:00 - 16:00",
-    "16:00 - 18:00"
+    "16:00 - 18:00",
   ];
 
   @override
@@ -65,10 +65,10 @@ class _RoomBookingScreenState extends State<RoomBookingScreen> {
   String _formatDate(DateTime dt) {
     final year = dt.year;
     final month = String.fromCharCodes([
-      ...dt.month.toString().padLeft(2, '0').codeUnits
+      ...dt.month.toString().padLeft(2, '0').codeUnits,
     ]);
     final day = String.fromCharCodes([
-      ...dt.day.toString().padLeft(2, '0').codeUnits
+      ...dt.day.toString().padLeft(2, '0').codeUnits,
     ]);
     return "$year-$month-$day";
   }
@@ -82,7 +82,7 @@ class _RoomBookingScreenState extends State<RoomBookingScreen> {
     try {
       final dash = await UserService.getDashboard();
       final auth = context.read<AuthProvider>();
-      
+
       setState(() {
         if (auth.role == 'ADMIN') {
           _bookings = dash['allRoomBookings'] as List? ?? [];
@@ -122,7 +122,10 @@ class _RoomBookingScreenState extends State<RoomBookingScreen> {
         _checkingAvailability = false;
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: ${e.toString().replaceAll("Exception: ", "")}'), backgroundColor: Colors.redAccent),
+        SnackBar(
+          content: Text('Error: ${e.toString().replaceAll("Exception: ", "")}'),
+          backgroundColor: Colors.redAccent,
+        ),
       );
     }
   }
@@ -133,15 +136,22 @@ class _RoomBookingScreenState extends State<RoomBookingScreen> {
 
     final auth = context.read<AuthProvider>();
     final isStudent = auth.role == 'STUDENT';
-    
-    final studentId = isStudent ? auth.userId! : _adminStudentIdController.text.trim();
-    final studentName = isStudent ? auth.fullName! : _adminStudentNameController.text.trim();
+
+    final studentId = isStudent
+        ? auth.userId!
+        : _adminStudentIdController.text.trim();
+    final studentName = isStudent
+        ? auth.fullName!
+        : _adminStudentNameController.text.trim();
     final purpose = _purposeController.text.trim();
     final formattedDate = _formatDate(_selectedDate);
 
     if (studentId.isEmpty || studentName.isEmpty || purpose.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please fill in all booking credentials.'), backgroundColor: Colors.redAccent),
+        const SnackBar(
+          content: Text('Please fill in all booking credentials.'),
+          backgroundColor: Colors.redAccent,
+        ),
       );
       return;
     }
@@ -170,25 +180,50 @@ class _RoomBookingScreenState extends State<RoomBookingScreen> {
           backgroundColor: const Color(0xFF1E1E1E),
           title: const Row(
             children: [
-              Icon(Icons.check_circle_outline_rounded, color: Color(0xFF00BFA5), size: 28),
+              Icon(
+                Icons.check_circle_outline_rounded,
+                color: Color(0xFF00BFA5),
+                size: 28,
+              ),
               SizedBox(width: 10),
-              Text('Booking Confirmed', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              Text(
+                'Booking Confirmed',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ],
           ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('Your room slot has been successfully registered.', style: TextStyle(color: Colors.white70)),
+              const Text(
+                'Your room slot has been successfully registered.',
+                style: TextStyle(color: Colors.white70),
+              ),
               const SizedBox(height: 16),
-              const Text('Booking Reference Code:', style: TextStyle(color: Colors.white38, fontSize: 12)),
+              const Text(
+                'Booking Reference Code:',
+                style: TextStyle(color: Colors.white38, fontSize: 12),
+              ),
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(color: Colors.black26, borderRadius: BorderRadius.circular(8)),
+                decoration: BoxDecoration(
+                  color: Colors.black26,
+                  borderRadius: BorderRadius.circular(8),
+                ),
                 child: Text(
                   refCode,
-                  style: const TextStyle(color: Color(0xFF00BFA5), fontSize: 16, fontWeight: FontWeight.bold, fontFamily: 'monospace', letterSpacing: 1.1),
+                  style: const TextStyle(
+                    color: Color(0xFF00BFA5),
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    fontFamily: 'monospace',
+                    letterSpacing: 1.1,
+                  ),
                   textAlign: TextAlign.center,
                 ),
               ),
@@ -210,8 +245,14 @@ class _RoomBookingScreenState extends State<RoomBookingScreen> {
         context: context,
         builder: (ctx) => AlertDialog(
           backgroundColor: const Color(0xFF1E1E1E),
-          title: const Text('Booking Failed', style: TextStyle(color: Colors.white)),
-          content: Text(e.toString().replaceAll("Exception: ", ""), style: const TextStyle(color: Colors.white70)),
+          title: const Text(
+            'Booking Failed',
+            style: TextStyle(color: Colors.white),
+          ),
+          content: Text(
+            e.toString().replaceAll("Exception: ", ""),
+            style: const TextStyle(color: Colors.white70),
+          ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(ctx).pop(),
@@ -229,17 +270,29 @@ class _RoomBookingScreenState extends State<RoomBookingScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: const Color(0xFF1E1E1E),
-        title: const Text('Cancel Booking', style: TextStyle(color: Colors.white)),
-        content: Text('Are you sure you want to cancel room booking reference $refCode?', style: const TextStyle(color: Colors.white70)),
+        title: const Text(
+          'Cancel Booking',
+          style: TextStyle(color: Colors.white),
+        ),
+        content: Text(
+          'Are you sure you want to cancel room booking reference $refCode?',
+          style: const TextStyle(color: Colors.white70),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Keep Booking', style: TextStyle(color: Colors.white54)),
+            child: const Text(
+              'Keep Booking',
+              style: TextStyle(color: Colors.white54),
+            ),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
             onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('Cancel Booking', style: TextStyle(color: Colors.white)),
+            child: const Text(
+              'Cancel Booking',
+              style: TextStyle(color: Colors.white),
+            ),
           ),
         ],
       ),
@@ -253,7 +306,10 @@ class _RoomBookingScreenState extends State<RoomBookingScreen> {
       final success = await SoapService.cancelBooking(refCode);
       if (success) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Booking cancelled successfully!'), backgroundColor: Color(0xFF00BFA5)),
+          const SnackBar(
+            content: Text('Booking cancelled successfully!'),
+            backgroundColor: Color(0xFF00BFA5),
+          ),
         );
       } else {
         throw Exception('Cancellation request was rejected.');
@@ -262,7 +318,10 @@ class _RoomBookingScreenState extends State<RoomBookingScreen> {
     } catch (e) {
       setState(() => _isLoading = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: ${e.toString().replaceAll("Exception: ", "")}'), backgroundColor: Colors.redAccent),
+        SnackBar(
+          content: Text('Error: ${e.toString().replaceAll("Exception: ", "")}'),
+          backgroundColor: Colors.redAccent,
+        ),
       );
     }
   }
@@ -303,10 +362,14 @@ class _RoomBookingScreenState extends State<RoomBookingScreen> {
                   children: [
                     // Dynamic Header Description
                     Text(
-                      isStudent 
-                          ? 'Select your preferred study room, time slot, and date. Booking is verified live in our SOAP database.' 
+                      isStudent
+                          ? 'Select your preferred study room, time slot, and date. Booking is verified live in our SOAP database.'
                           : 'As an Administrator, you can reserve slots on behalf of students. Enter their credentials below.',
-                      style: const TextStyle(color: Colors.white54, fontSize: 13, height: 1.4),
+                      style: const TextStyle(
+                        color: Colors.white54,
+                        fontSize: 13,
+                        height: 1.4,
+                      ),
                     ),
                     const SizedBox(height: 20),
 
@@ -320,9 +383,16 @@ class _RoomBookingScreenState extends State<RoomBookingScreen> {
                         labelStyle: const TextStyle(color: Colors.white70),
                         filled: true,
                         fillColor: const Color(0xFF1E1E1E),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: BorderSide.none,
+                        ),
                       ),
-                      items: _rooms.map((r) => DropdownMenuItem(value: r, child: Text(r))).toList(),
+                      items: _rooms
+                          .map(
+                            (r) => DropdownMenuItem(value: r, child: Text(r)),
+                          )
+                          .toList(),
                       onChanged: (val) {
                         if (val != null) {
                           setState(() {
@@ -344,9 +414,16 @@ class _RoomBookingScreenState extends State<RoomBookingScreen> {
                         labelStyle: const TextStyle(color: Colors.white70),
                         filled: true,
                         fillColor: const Color(0xFF1E1E1E),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: BorderSide.none,
+                        ),
                       ),
-                      items: _slots.map((s) => DropdownMenuItem(value: s, child: Text(s))).toList(),
+                      items: _slots
+                          .map(
+                            (s) => DropdownMenuItem(value: s, child: Text(s)),
+                          )
+                          .toList(),
                       onChanged: (val) {
                         if (val != null) {
                           setState(() {
@@ -365,7 +442,9 @@ class _RoomBookingScreenState extends State<RoomBookingScreen> {
                           context: context,
                           initialDate: _selectedDate,
                           firstDate: DateTime.now(),
-                          lastDate: DateTime.now().add(const Duration(days: 30)),
+                          lastDate: DateTime.now().add(
+                            const Duration(days: 30),
+                          ),
                           builder: (context, child) => Theme(
                             data: Theme.of(context).copyWith(
                               colorScheme: const ColorScheme.dark(
@@ -385,16 +464,28 @@ class _RoomBookingScreenState extends State<RoomBookingScreen> {
                         }
                       },
                       child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                        decoration: BoxDecoration(color: const Color(0xFF1E1E1E), borderRadius: BorderRadius.circular(10)),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 16,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF1E1E1E),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Text(
                               'Date: ${_formatDate(_selectedDate)}',
-                              style: const TextStyle(color: Colors.white, fontSize: 15),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 15,
+                              ),
                             ),
-                            const Icon(Icons.calendar_month_rounded, color: Color(0xFF00BFA5)),
+                            const Icon(
+                              Icons.calendar_month_rounded,
+                              color: Color(0xFF00BFA5),
+                            ),
                           ],
                         ),
                       ),
@@ -410,43 +501,69 @@ class _RoomBookingScreenState extends State<RoomBookingScreen> {
                               backgroundColor: Colors.white.withOpacity(0.05),
                               foregroundColor: Colors.white,
                               padding: const EdgeInsets.symmetric(vertical: 14),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
                             ),
-                            icon: _checkingAvailability 
-                                ? const SizedBox(height: 16, width: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                                : const Icon(Icons.verified_user_outlined, size: 18),
+                            icon: _checkingAvailability
+                                ? const SizedBox(
+                                    height: 16,
+                                    width: 16,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.white,
+                                    ),
+                                  )
+                                : const Icon(
+                                    Icons.verified_user_outlined,
+                                    size: 18,
+                                  ),
                             label: const Text('Check Slot Availability'),
-                            onPressed: _checkingAvailability ? null : _checkAvailability,
+                            onPressed: _checkingAvailability
+                                ? null
+                                : _checkAvailability,
                           ),
                         ),
                       ],
                     ),
-                    
+
                     // Availability Status Indicator
                     if (_isAvailable != null) ...[
                       const SizedBox(height: 12),
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: _isAvailable! ? const Color(0xFF00BFA5).withOpacity(0.12) : Colors.redAccent.withOpacity(0.12),
+                          color: _isAvailable!
+                              ? const Color(0xFF00BFA5).withOpacity(0.12)
+                              : Colors.redAccent.withOpacity(0.12),
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(
-                            color: _isAvailable! ? const Color(0xFF00BFA5).withOpacity(0.3) : Colors.redAccent.withOpacity(0.3),
+                            color: _isAvailable!
+                                ? const Color(0xFF00BFA5).withOpacity(0.3)
+                                : Colors.redAccent.withOpacity(0.3),
                           ),
                         ),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Icon(
-                              _isAvailable! ? Icons.check_circle_outline_rounded : Icons.cancel_outlined,
-                              color: _isAvailable! ? const Color(0xFF00BFA5) : Colors.redAccent,
+                              _isAvailable!
+                                  ? Icons.check_circle_outline_rounded
+                                  : Icons.cancel_outlined,
+                              color: _isAvailable!
+                                  ? const Color(0xFF00BFA5)
+                                  : Colors.redAccent,
                               size: 20,
                             ),
                             const SizedBox(width: 8),
                             Text(
-                              _isAvailable! ? 'Slot is AVAILABLE for Booking' : 'Slot is ALREADY BOOKED',
+                              _isAvailable!
+                                  ? 'Slot is AVAILABLE for Booking'
+                                  : 'Slot is ALREADY BOOKED',
                               style: TextStyle(
-                                color: _isAvailable! ? const Color(0xFF00BFA5) : Colors.redAccent,
+                                color: _isAvailable!
+                                    ? const Color(0xFF00BFA5)
+                                    : Colors.redAccent,
                                 fontWeight: FontWeight.bold,
                                 fontSize: 13,
                               ),
@@ -463,7 +580,11 @@ class _RoomBookingScreenState extends State<RoomBookingScreen> {
                     if (!isStudent) ...[
                       const Text(
                         'Student Identity Overrides (Admin Input)',
-                        style: TextStyle(color: Color(0xFF00BFA5), fontWeight: FontWeight.bold, fontSize: 14),
+                        style: TextStyle(
+                          color: Color(0xFF00BFA5),
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
                       ),
                       const SizedBox(height: 12),
                       TextFormField(
@@ -474,9 +595,15 @@ class _RoomBookingScreenState extends State<RoomBookingScreen> {
                           labelStyle: const TextStyle(color: Colors.white70),
                           filled: true,
                           fillColor: const Color(0xFF1E1E1E),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                            borderSide: BorderSide.none,
+                          ),
                         ),
-                        validator: (v) => !isStudent && (v == null || v.trim().isEmpty) ? 'Required for Admin booking' : null,
+                        validator: (v) =>
+                            !isStudent && (v == null || v.trim().isEmpty)
+                            ? 'Required for Admin booking'
+                            : null,
                       ),
                       const SizedBox(height: 12),
                       TextFormField(
@@ -487,9 +614,15 @@ class _RoomBookingScreenState extends State<RoomBookingScreen> {
                           labelStyle: const TextStyle(color: Colors.white70),
                           filled: true,
                           fillColor: const Color(0xFF1E1E1E),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                            borderSide: BorderSide.none,
+                          ),
                         ),
-                        validator: (v) => !isStudent && (v == null || v.trim().isEmpty) ? 'Required for Admin booking' : null,
+                        validator: (v) =>
+                            !isStudent && (v == null || v.trim().isEmpty)
+                            ? 'Required for Admin booking'
+                            : null,
                       ),
                       const SizedBox(height: 16),
                     ],
@@ -502,9 +635,14 @@ class _RoomBookingScreenState extends State<RoomBookingScreen> {
                         labelStyle: const TextStyle(color: Colors.white70),
                         filled: true,
                         fillColor: const Color(0xFF1E1E1E),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide.none),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          borderSide: BorderSide.none,
+                        ),
                       ),
-                      validator: (v) => v == null || v.trim().isEmpty ? 'Please input purpose' : null,
+                      validator: (v) => v == null || v.trim().isEmpty
+                          ? 'Please input purpose'
+                          : null,
                     ),
                     const SizedBox(height: 24),
 
@@ -513,12 +651,27 @@ class _RoomBookingScreenState extends State<RoomBookingScreen> {
                         backgroundColor: const Color(0xFF3F51B5), // Deep Indigo
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
                       ),
                       onPressed: _isLoading ? null : _submitBooking,
-                      child: _isLoading 
-                          ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                          : const Text('CONFIRM BOOKING', style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1.1)),
+                      child: _isLoading
+                          ? const SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Text(
+                              'CONFIRM BOOKING',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 1.1,
+                              ),
+                            ),
                     ),
                   ],
                 ),
@@ -527,7 +680,9 @@ class _RoomBookingScreenState extends State<RoomBookingScreen> {
 
             // ---- TAB 2: ACTIVE BOOKINGS LIST ----
             _isLoading
-                ? const Center(child: CircularProgressIndicator(color: Color(0xFF00BFA5)))
+                ? const Center(
+                    child: CircularProgressIndicator(color: Color(0xFF00BFA5)),
+                  )
                 : Padding(
                     padding: const EdgeInsets.all(16.0),
                     child: Column(
@@ -535,10 +690,14 @@ class _RoomBookingScreenState extends State<RoomBookingScreen> {
                       children: [
                         // Dynamic Header
                         Text(
-                          isStudent 
-                              ? 'Logs of study slots under your personal Matric account.' 
+                          isStudent
+                              ? 'Logs of study slots under your personal Matric account.'
                               : 'Total Campus bookings registry ledger (Admin audit access).',
-                          style: const TextStyle(color: Colors.white54, fontSize: 13, height: 1.4),
+                          style: const TextStyle(
+                            color: Colors.white54,
+                            fontSize: 13,
+                            height: 1.4,
+                          ),
                         ),
                         const SizedBox(height: 16),
 
@@ -548,7 +707,10 @@ class _RoomBookingScreenState extends State<RoomBookingScreen> {
                               ? const Center(
                                   child: Text(
                                     'No active bookings found.',
-                                    style: TextStyle(color: Colors.white38, fontSize: 14),
+                                    style: TextStyle(
+                                      color: Colors.white38,
+                                      fontSize: 14,
+                                    ),
                                     textAlign: TextAlign.center,
                                   ),
                                 )
@@ -556,17 +718,25 @@ class _RoomBookingScreenState extends State<RoomBookingScreen> {
                                   itemCount: _bookings.length,
                                   itemBuilder: (context, index) {
                                     final booking = _bookings[index];
-                                    final String ref = booking['bookingReference'];
+                                    final String ref =
+                                        booking['bookingReference'];
                                     final String room = booking['roomName'];
                                     final String slot = booking['slot'];
-                                    final String date = booking['bookingDate'] is String 
-                                        ? booking['bookingDate'] 
-                                        : booking['bookingDate'].toString().split('T')[0];
-                                    final String purpose = booking['purpose'] ?? 'Study session';
-                                    final String status = booking['status'] ?? 'CONFIRMED';
-                                    final String bStudentId = booking['studentId'] ?? 'N/A';
-                                    final String bStudentName = booking['studentName'] ?? 'N/A';
-                                    
+                                    final String date =
+                                        booking['bookingDate'] is String
+                                        ? booking['bookingDate']
+                                        : booking['bookingDate']
+                                              .toString()
+                                              .split('T')[0];
+                                    final String purpose =
+                                        booking['purpose'] ?? 'Study session';
+                                    final String status =
+                                        booking['status'] ?? 'CONFIRMED';
+                                    final String bStudentId =
+                                        booking['studentId'] ?? 'N/A';
+                                    final String bStudentName =
+                                        booking['studentName'] ?? 'N/A';
+
                                     final isConfirmed = status == 'CONFIRMED';
 
                                     return Card(
@@ -575,91 +745,186 @@ class _RoomBookingScreenState extends State<RoomBookingScreen> {
                                       shape: RoundedRectangleBorder(
                                         borderRadius: BorderRadius.circular(12),
                                         side: BorderSide(
-                                          color: isConfirmed ? Colors.white10 : Colors.redAccent.withOpacity(0.2),
+                                          color: isConfirmed
+                                              ? Colors.white10
+                                              : Colors.redAccent.withOpacity(
+                                                  0.2,
+                                                ),
                                         ),
                                       ),
                                       child: Padding(
                                         padding: const EdgeInsets.all(16.0),
                                         child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
                                           children: [
                                             Row(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
                                               children: [
                                                 Expanded(
                                                   child: Column(
-                                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                                    crossAxisAlignment:
+                                                        CrossAxisAlignment
+                                                            .start,
                                                     children: [
                                                       Text(
                                                         room,
-                                                        style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                                                        style: const TextStyle(
+                                                          color: Colors.white,
+                                                          fontSize: 16,
+                                                          fontWeight:
+                                                              FontWeight.bold,
+                                                        ),
                                                       ),
                                                       const SizedBox(height: 4),
                                                       Text(
                                                         'Slot: $slot',
-                                                        style: const TextStyle(color: Color(0xFF00BFA5), fontSize: 13, fontWeight: FontWeight.w600),
+                                                        style: const TextStyle(
+                                                          color: Color(
+                                                            0xFF00BFA5,
+                                                          ),
+                                                          fontSize: 13,
+                                                          fontWeight:
+                                                              FontWeight.w600,
+                                                        ),
                                                       ),
                                                     ],
                                                   ),
                                                 ),
                                                 // ---- Status Badge ----
                                                 Container(
-                                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                                  padding:
+                                                      const EdgeInsets.symmetric(
+                                                        horizontal: 8,
+                                                        vertical: 4,
+                                                      ),
                                                   decoration: BoxDecoration(
-                                                    color: isConfirmed 
-                                                        ? const Color(0xFF00BFA5).withOpacity(0.15) 
-                                                        : Colors.redAccent.withOpacity(0.15),
-                                                    borderRadius: BorderRadius.circular(8),
+                                                    color: isConfirmed
+                                                        ? const Color(
+                                                            0xFF00BFA5,
+                                                          ).withOpacity(0.15)
+                                                        : Colors.redAccent
+                                                              .withOpacity(
+                                                                0.15,
+                                                              ),
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          8,
+                                                        ),
                                                     border: Border.all(
-                                                      color: isConfirmed 
-                                                          ? const Color(0xFF00BFA5).withOpacity(0.4) 
-                                                          : Colors.redAccent.withOpacity(0.4),
+                                                      color: isConfirmed
+                                                          ? const Color(
+                                                              0xFF00BFA5,
+                                                            ).withOpacity(0.4)
+                                                          : Colors.redAccent
+                                                                .withOpacity(
+                                                                  0.4,
+                                                                ),
                                                     ),
                                                   ),
                                                   child: Text(
                                                     status,
                                                     style: TextStyle(
-                                                      color: isConfirmed ? const Color(0xFF00BFA5) : Colors.redAccent,
+                                                      color: isConfirmed
+                                                          ? const Color(
+                                                              0xFF00BFA5,
+                                                            )
+                                                          : Colors.redAccent,
                                                       fontSize: 10,
-                                                      fontWeight: FontWeight.bold,
+                                                      fontWeight:
+                                                          FontWeight.bold,
                                                     ),
                                                   ),
                                                 ),
                                               ],
                                             ),
-                                            const Divider(color: Colors.white10, height: 24),
-                                            Text('Date: $date', style: const TextStyle(color: Colors.white70, fontSize: 13)),
-                                            Text('Purpose: $purpose', style: const TextStyle(color: Colors.white54, fontSize: 13)),
-                                            
+                                            const Divider(
+                                              color: Colors.white10,
+                                              height: 24,
+                                            ),
+                                            Text(
+                                              'Date: $date',
+                                              style: const TextStyle(
+                                                color: Colors.white70,
+                                                fontSize: 13,
+                                              ),
+                                            ),
+                                            Text(
+                                              'Purpose: $purpose',
+                                              style: const TextStyle(
+                                                color: Colors.white54,
+                                                fontSize: 13,
+                                              ),
+                                            ),
+
                                             // Admin Audit view (Who booked it)
-                                            if (!isStudent || bStudentId != auth.userId) ...[
+                                            if (!isStudent ||
+                                                bStudentId != auth.userId) ...[
                                               const SizedBox(height: 4),
                                               Text(
                                                 'Booked by: $bStudentName ($bStudentId)',
-                                                style: const TextStyle(color: Colors.white38, fontSize: 13, fontWeight: FontWeight.w500),
+                                                style: const TextStyle(
+                                                  color: Colors.white38,
+                                                  fontSize: 13,
+                                                  fontWeight: FontWeight.w500,
+                                                ),
                                               ),
                                             ],
 
-                                            const Divider(color: Colors.white10, height: 20),
+                                            const Divider(
+                                              color: Colors.white10,
+                                              height: 20,
+                                            ),
 
                                             Row(
-                                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment
+                                                      .spaceBetween,
                                               children: [
                                                 Text(
                                                   'Ref: $ref',
-                                                  style: const TextStyle(color: Colors.white24, fontSize: 11, fontFamily: 'monospace', letterSpacing: 1.1),
+                                                  style: const TextStyle(
+                                                    color: Colors.white24,
+                                                    fontSize: 11,
+                                                    fontFamily: 'monospace',
+                                                    letterSpacing: 1.1,
+                                                  ),
                                                 ),
                                                 if (isConfirmed)
                                                   ElevatedButton(
                                                     style: ElevatedButton.styleFrom(
-                                                      backgroundColor: Colors.redAccent.withOpacity(0.15),
-                                                      foregroundColor: Colors.redAccent,
-                                                      side: const BorderSide(color: Colors.redAccent, width: 0.5),
-                                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                                      backgroundColor: Colors
+                                                          .redAccent
+                                                          .withOpacity(0.15),
+                                                      foregroundColor:
+                                                          Colors.redAccent,
+                                                      side: const BorderSide(
+                                                        color: Colors.redAccent,
+                                                        width: 0.5,
+                                                      ),
+                                                      padding:
+                                                          const EdgeInsets.symmetric(
+                                                            horizontal: 12,
+                                                            vertical: 8,
+                                                          ),
+                                                      shape: RoundedRectangleBorder(
+                                                        borderRadius:
+                                                            BorderRadius.circular(
+                                                              8,
+                                                            ),
+                                                      ),
                                                     ),
-                                                    onPressed: () => _cancelBooking(ref),
-                                                    child: const Text('CANCEL BOOKING', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11)),
+                                                    onPressed: () =>
+                                                        _cancelBooking(ref),
+                                                    child: const Text(
+                                                      'CANCEL BOOKING',
+                                                      style: TextStyle(
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                        fontSize: 11,
+                                                      ),
+                                                    ),
                                                   ),
                                               ],
                                             ),

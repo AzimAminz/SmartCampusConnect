@@ -31,13 +31,13 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     try {
       final auth = context.read<AuthProvider>();
       final isStudent = auth.role == 'STUDENT';
-      
-      final endpoint = isStudent 
-          ? '/notifications/recipient/${auth.userId}' 
+
+      final endpoint = isStudent
+          ? '/notifications/recipient/${auth.userId}'
           : '/notifications';
 
       final response = await ApiService.get(endpoint) as List;
-      
+
       setState(() {
         // Sort descending by created time (latest first) if id/timestamp is present
         _notifications = response.reversed.toList();
@@ -104,7 +104,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       ),
       drawer: const AppDrawer(currentRoute: 'notifications'),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: Color(0xFF00BFA5)))
+          ? const Center(
+              child: CircularProgressIndicator(color: Color(0xFF00BFA5)),
+            )
           : Padding(
               padding: const EdgeInsets.all(16.0),
               child: Column(
@@ -124,9 +126,17 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                       decoration: BoxDecoration(
                         color: Colors.redAccent.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: Colors.redAccent.withOpacity(0.3)),
+                        border: Border.all(
+                          color: Colors.redAccent.withOpacity(0.3),
+                        ),
                       ),
-                      child: Text(_error!, style: const TextStyle(color: Colors.redAccent, fontSize: 13)),
+                      child: Text(
+                        _error!,
+                        style: const TextStyle(
+                          color: Colors.redAccent,
+                          fontSize: 13,
+                        ),
+                      ),
                     ),
                     const SizedBox(height: 12),
                   ],
@@ -138,11 +148,18 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Icon(Icons.notifications_off_rounded, size: 60, color: Colors.white24),
+                                Icon(
+                                  Icons.notifications_off_rounded,
+                                  size: 60,
+                                  color: Colors.white24,
+                                ),
                                 SizedBox(height: 16),
                                 Text(
                                   'Your notification ledger is empty.',
-                                  style: TextStyle(color: Colors.white38, fontSize: 14),
+                                  style: TextStyle(
+                                    color: Colors.white38,
+                                    fontSize: 14,
+                                  ),
                                 ),
                               ],
                             ),
@@ -151,13 +168,21 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                             itemCount: _notifications.length,
                             itemBuilder: (context, index) {
                               final notif = _notifications[index];
-                              final String type = notif['type'] ?? 'SYSTEM_ALERT';
-                              final String body = notif['message'] ?? 'No description';
-                              final String ref = notif['referenceParameter'] ?? 'N/A';
-                              final String recipient = notif['recipientId'] ?? 'N/A';
-                              final String studentName = notif['studentName'] ?? 'N/A';
-                              final String date = notif['createdAt'] != null 
-                                  ? notif['createdAt'].toString().replaceAll('T', ' ').substring(0, 19) 
+                              final String type =
+                                  notif['type'] ?? 'SYSTEM_ALERT';
+                              final String body =
+                                  notif['message'] ?? 'No description';
+                              final String ref =
+                                  notif['referenceParameter'] ?? 'N/A';
+                              final String recipient =
+                                  notif['recipientId'] ?? 'N/A';
+                              final String studentName =
+                                  notif['studentName'] ?? 'N/A';
+                              final String date = notif['createdAt'] != null
+                                  ? notif['createdAt']
+                                        .toString()
+                                        .replaceAll('T', ' ')
+                                        .substring(0, 19)
                                   : 'N/A';
 
                               final iconColor = _getColor(type);
@@ -178,46 +203,72 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                       color: iconColor.withOpacity(0.1),
                                       shape: BoxShape.circle,
                                     ),
-                                    child: Icon(icon, color: iconColor, size: 24),
+                                    child: Icon(
+                                      icon,
+                                      color: iconColor,
+                                      size: 24,
+                                    ),
                                   ),
                                   title: Text(
                                     body,
-                                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 14),
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 14,
+                                    ),
                                   ),
                                   subtitle: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       const SizedBox(height: 8),
                                       Row(
-                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
                                         children: [
                                           Expanded(
                                             child: Text(
                                               'Type: ${type.replaceAll('_', ' ')}',
-                                              style: TextStyle(color: iconColor, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 0.5),
+                                              style: TextStyle(
+                                                color: iconColor,
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.bold,
+                                                letterSpacing: 0.5,
+                                              ),
                                               overflow: TextOverflow.ellipsis,
                                             ),
                                           ),
                                           const SizedBox(width: 8),
                                           Text(
                                             date,
-                                            style: const TextStyle(color: Colors.white38, fontSize: 11),
+                                            style: const TextStyle(
+                                              color: Colors.white38,
+                                              fontSize: 11,
+                                            ),
                                           ),
                                         ],
                                       ),
                                       const SizedBox(height: 4),
                                       Row(
-                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.spaceBetween,
                                         children: [
                                           Text(
                                             'Ref: $ref',
-                                            style: const TextStyle(color: Colors.white24, fontSize: 11, fontFamily: 'monospace'),
+                                            style: const TextStyle(
+                                              color: Colors.white24,
+                                              fontSize: 11,
+                                              fontFamily: 'monospace',
+                                            ),
                                           ),
                                           const SizedBox(width: 8),
                                           Expanded(
                                             child: Text(
                                               'Matric: $recipient ($studentName)',
-                                              style: const TextStyle(color: Colors.white38, fontSize: 11),
+                                              style: const TextStyle(
+                                                color: Colors.white38,
+                                                fontSize: 11,
+                                              ),
                                               textAlign: TextAlign.end,
                                               overflow: TextOverflow.ellipsis,
                                             ),

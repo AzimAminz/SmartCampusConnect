@@ -70,7 +70,7 @@ class AuthProvider with ChangeNotifier {
 
     try {
       final data = await AuthService.login(inputUserId);
-      
+
       _token = data['token'];
       _userId = data['userId'];
       _role = data['role'];

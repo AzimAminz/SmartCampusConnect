@@ -6,9 +6,9 @@ class BookLoan {
   final String bookIsbn;
   final String? bookTitle;
   final String loanDate; // yyyy-MM-dd
-  final String dueDate;  // yyyy-MM-dd
+  final String dueDate; // yyyy-MM-dd
   final String? returnDate; // yyyy-MM-dd (null if not returned)
-  final String status;   // 'BORROWED', 'RETURNED', 'OVERDUE', 'LOST'
+  final String status; // 'BORROWED', 'RETURNED', 'OVERDUE', 'LOST'
   final double fineAmount;
 
   BookLoan({
@@ -30,7 +30,12 @@ class BookLoan {
 
   factory BookLoan.fromJson(Map<String, dynamic> json) {
     final retDateVal = json['returnDate'] as String?;
-    final retDate = (retDateVal == null || retDateVal.trim().isEmpty || retDateVal == 'null') ? null : retDateVal;
+    final retDate =
+        (retDateVal == null ||
+            retDateVal.trim().isEmpty ||
+            retDateVal == 'null')
+        ? null
+        : retDateVal;
 
     return BookLoan(
       id: json['id'] as int,

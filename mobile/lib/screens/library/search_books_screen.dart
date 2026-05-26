@@ -72,7 +72,10 @@ class _SearchBooksScreenState extends State<SearchBooksScreen> {
               decoration: InputDecoration(
                 hintText: 'Search by title, author, category, or ISBN...',
                 hintStyle: const TextStyle(color: Colors.white38),
-                prefixIcon: const Icon(Icons.search_rounded, color: Color(0xFF3F51B5)),
+                prefixIcon: const Icon(
+                  Icons.search_rounded,
+                  color: Color(0xFF3F51B5),
+                ),
                 suffixIcon: IconButton(
                   icon: const Icon(Icons.clear_rounded, color: Colors.white54),
                   onPressed: () {
@@ -101,12 +104,19 @@ class _SearchBooksScreenState extends State<SearchBooksScreen> {
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.error_outline, color: Colors.redAccent, size: 20),
+                    const Icon(
+                      Icons.error_outline,
+                      color: Colors.redAccent,
+                      size: 20,
+                    ),
                     const SizedBox(width: 10),
                     Expanded(
                       child: Text(
                         _error!,
-                        style: const TextStyle(color: Colors.redAccent, fontSize: 13),
+                        style: const TextStyle(
+                          color: Colors.redAccent,
+                          fontSize: 13,
+                        ),
                       ),
                     ),
                   ],
@@ -119,102 +129,121 @@ class _SearchBooksScreenState extends State<SearchBooksScreen> {
             Expanded(
               child: _isLoading
                   ? const Center(
-                      child: CircularProgressIndicator(color: Color(0xFF00BFA5)),
+                      child: CircularProgressIndicator(
+                        color: Color(0xFF00BFA5),
+                      ),
                     )
                   : _books.isEmpty
-                      ? const Center(
-                          child: Text(
-                            'No books found matching your query.',
-                            style: TextStyle(color: Colors.white38, fontSize: 14),
-                          ),
-                        )
-                      : ListView.builder(
-                          itemCount: _books.length,
-                          itemBuilder: (context, index) {
-                            final book = _books[index];
-                            final isAvail = book.isAvailable;
+                  ? const Center(
+                      child: Text(
+                        'No books found matching your query.',
+                        style: TextStyle(color: Colors.white38, fontSize: 14),
+                      ),
+                    )
+                  : ListView.builder(
+                      itemCount: _books.length,
+                      itemBuilder: (context, index) {
+                        final book = _books[index];
+                        final isAvail = book.isAvailable;
 
-                            return Card(
-                              color: const Color(0xFF1E1E1E),
-                              margin: const EdgeInsets.only(bottom: 12),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                                side: const BorderSide(color: Colors.white10),
-                              ),
-                              child: Padding(
-                                padding: const EdgeInsets.all(16.0),
-                                child: Column(
+                        return Card(
+                          color: const Color(0xFF1E1E1E),
+                          margin: const EdgeInsets.only(bottom: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            side: const BorderSide(color: Colors.white10),
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.all(16.0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Row(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Expanded(
-                                          child: Text(
-                                            book.title,
-                                            style: const TextStyle(
-                                              color: Colors.white,
-                                              fontSize: 16,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
+                                    Expanded(
+                                      child: Text(
+                                        book.title,
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
                                         ),
-                                        const SizedBox(width: 8),
-                                        // ---- Availability Status Badge ----
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 10,
-                                            vertical: 4,
-                                          ),
-                                          decoration: BoxDecoration(
-                                            color: isAvail
-                                                ? const Color(0xFF00BFA5).withOpacity(0.15)
-                                                : Colors.redAccent.withOpacity(0.15),
-                                            borderRadius: BorderRadius.circular(20),
-                                            border: Border.all(
-                                              color: isAvail
-                                                  ? const Color(0xFF00BFA5).withOpacity(0.4)
-                                                  : Colors.redAccent.withOpacity(0.4),
-                                            ),
-                                          ),
-                                          child: Text(
-                                            book.status,
-                                            style: TextStyle(
-                                              color: isAvail
-                                                  ? const Color(0xFF00BFA5)
-                                                  : Colors.redAccent,
-                                              fontSize: 11,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    // ---- Availability Status Badge ----
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 10,
+                                        vertical: 4,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: isAvail
+                                            ? const Color(
+                                                0xFF00BFA5,
+                                              ).withOpacity(0.15)
+                                            : Colors.redAccent.withOpacity(
+                                                0.15,
+                                              ),
+                                        borderRadius: BorderRadius.circular(20),
+                                        border: Border.all(
+                                          color: isAvail
+                                              ? const Color(
+                                                  0xFF00BFA5,
+                                                ).withOpacity(0.4)
+                                              : Colors.redAccent.withOpacity(
+                                                  0.4,
+                                                ),
                                         ),
-                                      ],
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      'Author: ${book.author ?? "Unknown"}',
-                                      style: const TextStyle(color: Colors.white70, fontSize: 13),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      'Category: ${book.category ?? "General"}',
-                                      style: const TextStyle(color: Colors.white54, fontSize: 13),
-                                    ),
-                                    const Divider(color: Colors.white10, height: 20),
-                                    Text(
-                                      'ISBN: ${book.isbn}',
-                                      style: const TextStyle(
-                                        color: Colors.white38,
-                                        fontSize: 11,
-                                        fontFamily: 'monospace',
+                                      ),
+                                      child: Text(
+                                        book.status,
+                                        style: TextStyle(
+                                          color: isAvail
+                                              ? const Color(0xFF00BFA5)
+                                              : Colors.redAccent,
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold,
+                                        ),
                                       ),
                                     ),
                                   ],
                                 ),
-                              ),
-                            );
-                          },
-                        ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'Author: ${book.author ?? "Unknown"}',
+                                  style: const TextStyle(
+                                    color: Colors.white70,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Category: ${book.category ?? "General"}',
+                                  style: const TextStyle(
+                                    color: Colors.white54,
+                                    fontSize: 13,
+                                  ),
+                                ),
+                                const Divider(
+                                  color: Colors.white10,
+                                  height: 20,
+                                ),
+                                Text(
+                                  'ISBN: ${book.isbn}',
+                                  style: const TextStyle(
+                                    color: Colors.white38,
+                                    fontSize: 11,
+                                    fontFamily: 'monospace',
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
             ),
           ],
         ),

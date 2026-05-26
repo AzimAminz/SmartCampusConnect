@@ -61,7 +61,10 @@ class ApiService {
   /**
    * POST Request
    */
-  static Future<dynamic> post(String endpoint, Map<String, dynamic>? body) async {
+  static Future<dynamic> post(
+    String endpoint,
+    Map<String, dynamic>? body,
+  ) async {
     final headers = await _getHeaders();
     final response = await http.post(
       Uri.parse('$baseUrl$endpoint'),
@@ -81,7 +84,7 @@ class ApiService {
       headers: headers,
       body: json.encode(body),
     );
-    
+
     return _handleResponse(response);
   }
 
