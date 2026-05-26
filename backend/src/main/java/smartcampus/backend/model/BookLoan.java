@@ -1,8 +1,12 @@
 package smartcampus.backend.model;
 
 import jakarta.persistence.*;
+import jakarta.xml.bind.annotation.XmlAccessType;
+import jakarta.xml.bind.annotation.XmlAccessorType;
+import jakarta.xml.bind.annotation.adapters.XmlJavaTypeAdapter;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+
 
 /**
  * Library / Booking Service - Book Loan Entity
@@ -11,7 +15,9 @@ import java.time.LocalDateTime;
  */
 @Entity
 @Table(name = "book_loans")
+@XmlAccessorType(XmlAccessType.FIELD)
 public class BookLoan {
+
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -33,13 +39,17 @@ public class BookLoan {
     private String bookTitle;
 
     @Column(name = "loan_date", nullable = false)
+    @XmlJavaTypeAdapter(LocalDateAdapter.class)
     private LocalDate loanDate;
 
     @Column(name = "due_date", nullable = false)
+    @XmlJavaTypeAdapter(LocalDateAdapter.class)
     private LocalDate dueDate;    // Typically 14 days from loan date
 
     @Column(name = "return_date")
+    @XmlJavaTypeAdapter(LocalDateAdapter.class)
     private LocalDate returnDate; // NULL until returned
+
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 15)
