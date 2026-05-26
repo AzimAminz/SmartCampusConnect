@@ -29,6 +29,9 @@ class BookLoan {
   bool get isOverdue => status == 'OVERDUE';
 
   factory BookLoan.fromJson(Map<String, dynamic> json) {
+    final retDateVal = json['returnDate'] as String?;
+    final retDate = (retDateVal == null || retDateVal.trim().isEmpty || retDateVal == 'null') ? null : retDateVal;
+
     return BookLoan(
       id: json['id'] as int,
       loanReference: json['loanReference'] as String,
@@ -38,7 +41,7 @@ class BookLoan {
       bookTitle: json['bookTitle'] as String?,
       loanDate: json['loanDate'] as String,
       dueDate: json['dueDate'] as String,
-      returnDate: json['returnDate'] as String?,
+      returnDate: retDate,
       status: json['status'] as String,
       fineAmount: (json['fineAmount'] as num).toDouble(),
     );
