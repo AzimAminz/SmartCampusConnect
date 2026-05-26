@@ -4,10 +4,10 @@ export const ApiClient = {
   async request(url, options = {}) {
     const headers = new Headers(options.headers || {});
     
-    // Auto-inject JWT token if user is authenticated
+    // Auto-inject token if user is authenticated
     const token = SessionManager.getToken();
     if (token) {
-      headers.set('Authorization', `Bearer ${token}`);
+      headers.set('X-Auth-Token', token);
     }
     
     if (!headers.has('Content-Type') && !(options.body instanceof FormData)) {
