@@ -71,7 +71,7 @@ public class StudentController {
         }
     }
 
-    // PUT /api/students/id/{id} - UPDATE by database ID
+    // PUT /api/students/{id} - UPDATE by database ID
     @PutMapping("/{id}")
     public ResponseEntity<?> updateById(
             @PathVariable Long id, 
@@ -95,7 +95,7 @@ public class StudentController {
     }
     
 
-    // DELETE /api/students/id/{id} - DELETE by database ID
+    // DELETE /api/students/{id} - DELETE by database ID
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteById(@PathVariable Long id) {
         try {
