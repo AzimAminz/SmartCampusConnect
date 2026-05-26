@@ -134,12 +134,12 @@ Admin akan menerima: **ringkasan statistik + semua pinjaman + semua tempahan**.
 | `PUT` | `/api/students/{id}` | Update an existing student's info | `200 OK` or `404 Not Found` |
 | `DELETE` | `/api/students/{id}` | Remove a student record | `204 No Content` or `404 Not Found` |
 
-**Contoh `POST /api/students` Request Body:**
+**Contoh `POST /api/students` Request Body (Student ID is Server-Generated):**
 ```json
 {
-  "studentId": "B032310006",
   "name": "Ahmad Azim",
   "email": "azim@student.utem.edu.my",
+  "programmeCode": "B",
   "programme": "Bachelor of Computer Science (Hons)",
   "faculty": "FTMK",
   "semester": "1",
@@ -148,7 +148,14 @@ Admin akan menerima: **ringkasan statistik + semua pinjaman + semua tempahan**.
 }
 ```
 
+> [!NOTE]
+> Student ID is **automatically generated** by the backend service thread-safely via a `ReentrantLock` (FIFO fair scheduling) to prevent ID conflicts between concurrent web, mobile, and desktop client registrations. Additionally:
+> 1. **Add Student**: Automatically creates a login `User` credential account in the database so the student can log in instantly.
+> 2. **Update Student**: Syncs name changes to the authentication `User` account's `fullName`.
+> 3. **Delete Student**: Cascades to delete the student profile, remove their login credentials, and invalidate all active session tokens immediately.
+
 ---
+
 
 ### 📚 Course & Enrolment Service (REST)
 **Base URL**: `http://localhost:8080/api`

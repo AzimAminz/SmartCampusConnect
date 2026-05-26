@@ -174,7 +174,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"studentId\": \"B032310006\",\n  \"name\": \"Amin bin Rosli\",\n  \"email\": \"amin@student.utem.edu.my\",\n  \"programme\": \"Bachelor of Computer Science (Hons)\",\n  \"faculty\": \"FTMK\",\n  \"semester\": \"1\",\n  \"gpa\": 3.60,\n  \"phoneNumber\": \"0123456786\"\n}",
+              "raw": "{\n  \"name\": \"Amin bin Rosli\",\n  \"email\": \"amin@student.utem.edu.my\",\n  \"programmeCode\": \"B\",\n  \"programme\": \"Bachelor of Computer Science (Hons)\",\n  \"faculty\": \"FTMK\",\n  \"semester\": \"1\",\n  \"gpa\": 3.60,\n  \"phoneNumber\": \"0123456786\"\n}",
               "options": { "raw": { "language": "json" } }
             },
             "url": {
