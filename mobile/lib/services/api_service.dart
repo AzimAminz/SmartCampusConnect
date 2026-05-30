@@ -1,9 +1,16 @@
 import 'dart:convert';
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
-  static const String baseUrl = "http://localhost:8080/api";
+  static String get baseUrl {
+    if (!kIsWeb && Platform.isAndroid) {
+      return "http://10.0.2.2:8080/api";
+    }
+    return "http://localhost:8080/api";
+  }
 
   /**
    * Helper to retrieve headers, automatically injecting the auth token if present.

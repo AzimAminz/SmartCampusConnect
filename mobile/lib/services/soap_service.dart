@@ -1,11 +1,18 @@
 import 'dart:convert';
+import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:http/http.dart' as http;
 import 'package:xml/xml.dart' as xml;
 import '../models/book.dart';
 import '../models/book_loan.dart';
 
 class SoapService {
-  static const String soapUrl = "http://localhost:8085/ws/booking";
+  static String get soapUrl {
+    if (!kIsWeb && Platform.isAndroid) {
+      return "http://10.0.2.2:8085/ws/booking";
+    }
+    return "http://localhost:8085/ws/booking";
+  }
 
   /**
    * Operation A: bookRoom

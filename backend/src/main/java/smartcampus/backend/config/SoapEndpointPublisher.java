@@ -26,13 +26,41 @@ public class SoapEndpointPublisher {
 
     @PostConstruct
     public void publishSoapEndpoint() {
-        String url = "http://0.0.0.0:" + soapPort + "/ws/booking";
-
         Thread soapThread = new Thread(() -> {
             try {
-                Endpoint endpoint = Endpoint.publish(url, campusBookingSoapService);
-                System.out.println("✅ [SOAP-SERVER] WSDL published at: " + url + "?wsdl");
-                // Keep thread alive — endpoint is active as long as thread runs
+                com.sun.net.httpserver.HttpServer server = com.sun.net.httpserver.HttpServer.create(
+                    new java.net.InetSocketAddress("0.0.0.0", soapPort), 0
+                );
+                com.sun.net.httpserver.HttpContext context = server.createContext("/ws/booking");
+                context.getFilters().add(new com.sun.net.httpserver.Filter() {
+                    @Override
+                    public String description() {
+                        return "CORS Filter";
+                    }
+
+                    @Override
+                    public void doFilter(com.sun.net.httpserver.HttpExchange exchange, Chain chain) throws java.io.IOException {
+                        exchange.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
+                        exchange.getResponseHeaders().set("Access-Control-Allow-Methods", "POST, GET, OPTIONS");
+                        exchange.getResponseHeaders().set("Access-Control-Allow-Headers", "Content-Type, Authorization, X-Requested-With, Accept");
+                        
+                        if ("OPTIONS".equalsIgnoreCase(exchange.getRequestMethod())) {
+                            exchange.getResponseHeaders().set("Access-Control-Max-Age", "86400");
+                            exchange.sendResponseHeaders(204, -1);
+                            exchange.close();
+                            return;
+                        }
+                        
+                        chain.doFilter(exchange);
+                    }
+                });
+
+                Endpoint endpoint = Endpoint.create(campusBookingSoapService);
+                endpoint.publish(context);
+                server.start();
+
+                System.out.println("✅ [SOAP-SERVER] WSDL published with CORS support at: http://localhost:" + soapPort + "/ws/booking?wsdl");
+                
                 synchronized (this) {
                     this.wait();
                 }
