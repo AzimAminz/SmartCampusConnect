@@ -113,9 +113,12 @@ public class StudentService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "Unknown faculty: " + faculty + ". Valid: " + FACULTY_CODES.keySet());
 
-        if (studentRepository.existsByEmail(email))
-            throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "Email already registered: " + email);
+        String resolvedEmail = email.trim().toLowerCase();
+        if (!"auto".equals(resolvedEmail)) {
+            if (studentRepository.existsByEmail(resolvedEmail))
+                throw new ResponseStatusException(HttpStatus.CONFLICT,
+                        "Email already registered: " + resolvedEmail);
+        }
 
         // ── Thread-safe ID generation + save ────────────────────────────────
         idGenerationLock.lock();
@@ -123,10 +126,18 @@ public class StudentService {
             String generatedId = generateNextStudentId(
                     programmeCode.toUpperCase(), faculty.toUpperCase(), semester);
 
+            if ("auto".equals(resolvedEmail)) {
+                resolvedEmail = generatedId.toLowerCase() + "@student.utem.edu.my";
+                if (studentRepository.existsByEmail(resolvedEmail)) {
+                    throw new ResponseStatusException(HttpStatus.CONFLICT,
+                            "Email already registered: " + resolvedEmail);
+                }
+            }
+
             Student student = new Student();
             student.setStudentId(generatedId);
             student.setName(name.trim());
-            student.setEmail(email.trim().toLowerCase());
+            student.setEmail(resolvedEmail);
             student.setProgramme(programme != null ? programme.trim() : "");
             student.setFaculty(faculty.toUpperCase());
             student.setSemester(semester != null ? semester.trim() : "1");

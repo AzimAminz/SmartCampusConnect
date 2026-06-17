@@ -11,11 +11,7 @@ import java.time.LocalDateTime;
  */
 @Entity
 @Table(
-    name = "room_bookings",
-    uniqueConstraints = @UniqueConstraint(
-        name = "uq_room_slot_date",
-        columnNames = {"room_name", "slot", "booking_date"}
-    )
+    name = "room_bookings"
 )
 public class RoomBooking {
 

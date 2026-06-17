@@ -154,7 +154,6 @@ CREATE TABLE IF NOT EXISTS `room_bookings` (
     `cancelled_at`      DATETIME    DEFAULT NULL,
     PRIMARY KEY (`id`),
     UNIQUE KEY `uq_booking_reference`   (`booking_reference`),
-    UNIQUE KEY `uq_room_slot_date`      (`room_name`, `slot`, `booking_date`),
     KEY `idx_room_bookings_student`     (`student_id`),
     KEY `idx_room_bookings_date`        (`booking_date`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
