@@ -3,6 +3,8 @@ import { LoginView } from './views/login.js';
 import { DashboardView } from './views/dashboard.js';
 import { ProfileView } from './views/profile.js';
 
+console.log("JS is working ✅");
+
 // Route list
 const routes = {
   login: LoginView,

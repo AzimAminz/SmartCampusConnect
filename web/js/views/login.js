@@ -1,14 +1,12 @@
-import { AuthService } from '../services/auth.js';
+import { AuthService } from "../services/auth.js";
 
 export const LoginView = {
   render() {
     return `
       <div class="auth-container glass-panel" style="padding: 3rem 2.5rem; max-width: 460px; margin: auto; display: flex; flex-direction: column; gap: 1.5rem;">
-        <div style="text-align: center; margin-bottom: 1rem;">
-          <div style="font-size: 3.5rem; line-height: 1; margin-bottom: 1rem;">🏫</div>
-          <h2 style="font-size: 2.2rem; background: linear-gradient(135deg, #FFFFFF, var(--text-secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 0.25rem;">SmartCampus</h2>
-          <span style="color: var(--secondary); font-family: 'Outfit', sans-serif; font-weight: 700; letter-spacing: 2px; font-size: 0.9rem; text-transform: uppercase;">Connect</span>
-        </div>
+        <div style="display: flex; justify-content: center; align-items: center; gap: 10px; margin-bottom: 1rem;">
+        <img src="./omgosh-final.png" alt="Logo" style="height: 80px; width: auto;">
+      </div>
         
         <form id="login-form">
           <div class="form-group" style="margin-bottom: 1.5rem;">
@@ -33,22 +31,23 @@ export const LoginView = {
   },
 
   afterRender(navigateTo) {
-    const form = document.getElementById('login-form');
-    const errorDiv = document.getElementById('error-message');
+    const form = document.getElementById("login-form");
+    const errorDiv = document.getElementById("error-message");
 
-    form.addEventListener('submit', async (e) => {
+    form.addEventListener("submit", async (e) => {
       e.preventDefault();
-      
-      const userId = document.getElementById('userId').value.trim();
-      errorDiv.style.display = 'none';
-      
+
+      const userId = document.getElementById("userId").value.trim();
+      errorDiv.style.display = "none";
+
       try {
         await AuthService.login(userId);
-        navigateTo('dashboard');
+        navigateTo("dashboard");
       } catch (err) {
-        errorDiv.textContent = err.message || 'Invalid username or credentials.';
-        errorDiv.style.display = 'block';
+        errorDiv.textContent =
+          err.message || "Invalid username or credentials.";
+        errorDiv.style.display = "block";
       }
     });
-  }
+  },
 };
