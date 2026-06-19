@@ -6,68 +6,94 @@ The system integrates three clients (**Web**, **Mobile**, and **Desktop**) commu
 
 ---
 
-## 🏗️ System Architecture
+## 🏗️ System Architecture (Sequence Diagram)
 
-This Mermaid diagram illustrates the microservice layers, ports, and inter-service HTTP WebClient communication:
+This sequence diagram illustrates the lifecycle of client requests, gateway routing, inter-service API orchestration, database transactions, and notification dispatching across boundaries:
 
 ```mermaid
-graph TD
-    %% Styling Definitions
-    classDef client fill:#eef,stroke:#33b,stroke-width:2px;
-    classDef gateway fill:#fee,stroke:#b33,stroke-width:2px;
-    classDef service fill:#efe,stroke:#3b3,stroke-width:2px;
-    classDef db fill:#ffd,stroke:#bb3,stroke-width:2px;
-
-    %% Client Layer
-    subgraph Clients ["Client Applications"]
-        Web["🌐 Web Client<br>(Vanilla JS SPA on :3000)"]:::client
-        Mobile["📱 Mobile Client<br>(Flutter App)"]:::client
-        Desktop["💻 Desktop Client<br>(Java Swing App)"]:::client
+sequenceDiagram
+    autonumber
+    
+    box rgb(30, 41, 59) "CLIENT SIDE"
+        actor Student as :Student / Admin
+        participant Client as :Web / Mobile / Desktop Client
     end
 
-    %% Gateway / Entrypoint Layer
-    subgraph GatewayLayer ["Gateway & Routing"]
-        Gateway["☕ Student Service / REST Gateway<br>(Spring Boot on :8080)"]:::gateway
+    box rgb(22, 78, 99) "GATEWAY LAYER"
+        participant Gateway as :Student Service / Gateway (:8080)
     end
 
-    %% Microservices Layer
-    subgraph Services ["Backend Microservices"]
-        Enrolment["☕ Enrolment Service<br>(Spring Boot on :8081)"]:::service
-        Booking["☕ Booking Service<br>(Spring Boot on :8082 / SOAP :8085)"]:::service
-        Notification["☕ Notification Service<br>(Spring Boot on :8083 / TCP :9090)"]:::service
+    box rgb(17, 24, 39) "MICROSERVICES LAYER"
+        participant Enrolment as :Enrolment Service (:8081)
+        participant Booking as :Booking Service (:8082 / :8085)
+        participant Notification as :Notification Service (:8083)
     end
 
-    %% Database Layer
-    subgraph Databases ["Isolated MySQL Databases"]
-        DB_Student[("🗄️ db_student")]:::db
-        DB_Enrolment[("🗄️ db_enrolment")]:::db
-        DB_Booking[("🗄️ db_booking")]:::db
-        DB_Notification[("🗄️ db_notification")]:::db
+    box rgb(63, 63, 70) "DATABASE LAYER"
+        participant DB_Student as :db_student (MySQL)
+        participant DB_Enrolment as :db_enrolment (MySQL)
+        participant DB_Booking as :db_booking (MySQL)
+        participant DB_Notification as :db_notification (MySQL)
     end
 
-    %% Communication Flow
-    Web -->|REST| Gateway
-    Mobile -->|REST| Gateway
-    Desktop -->|REST| Gateway
+    %% Login flow
+    Student->>Client: 1. Input credentials (Matric / User ID)
+    activate Client
+    Client->>Gateway: POST /api/auth/login
+    activate Gateway
+    Gateway->>DB_Student: Query user profile & session
+    activate DB_Student
+    DB_Student-->>Gateway: Return profile & session token
+    deactivate DB_Student
+    Gateway-->>Client: HTTP 200 OK (Session Token)
+    deactivate Gateway
+    Client-->>Student: Render dashboard homepage
+    deactivate Client
 
-    Mobile -.->|SOAP| Booking
-    Desktop -.->|SOAP| Booking
+    %% Course Enrolment Flow
+    Student->>Client: 2. Request Course Enrolment
+    activate Client
+    Client->>Gateway: POST /api/enrol (logical gateway route)
+    activate Gateway
+    Gateway->>Enrolment: Forward POST /api/enrol (HTTP WebClient)
+    activate Enrolment
+    
+    %% Verify Student exists
+    Enrolment->>Gateway: GET /api/students/id/{id} (Verify Student)
+    activate Gateway
+    Gateway->>DB_Student: Query student profile
+    activate DB_Student
+    DB_Student-->>Gateway: Return student details
+    deactivate DB_Student
+    Gateway-->>Enrolment: HTTP 200 OK (Student details)
+    deactivate Gateway
 
-    Gateway -->|JPA| DB_Student
-    Enrolment -->|JPA| DB_Enrolment
-    Booking -->|JPA| DB_Booking
-    Notification -->|JPA| DB_Notification
+    %% Save Enrolment
+    Enrolment->>DB_Enrolment: Save enrolment (ReentrantLock protected)
+    activate DB_Enrolment
+    DB_Enrolment-->>Enrolment: Success
+    deactivate DB_Enrolment
 
-    Gateway ==>|HTTP WebClient| Enrolment
-    Gateway ==>|HTTP WebClient| Booking
-    Gateway ==>|HTTP WebClient| Notification
+    %% Trigger Notification
+    Enrolment->>Notification: POST /api/notify (Alert User)
+    activate Notification
+    Notification->>DB_Notification: Save notification details
+    activate DB_Notification
+    DB_Notification-->>Notification: Success
+    deactivate DB_Notification
+    Notification-->>Enrolment: HTTP 200 OK (Notified)
+    deactivate Notification
 
-    Enrolment -.->|HTTP WebClient| Gateway
-    Enrolment -.->|HTTP WebClient| Notification
-    Booking -.->|HTTP WebClient| Notification
+    Enrolment-->>Gateway: HTTP 200 OK (Enrolled)
+    deactivate Enrolment
+    Gateway-->>Client: HTTP 200 OK (Enrolment details)
+    deactivate Gateway
+    Client-->>Student: Update UI (Show "Enrolled Successfully")
+    deactivate Client
 ```
 
 ---
+
 
 ## 🗄️ Database Relationships (ER Diagram)
 
