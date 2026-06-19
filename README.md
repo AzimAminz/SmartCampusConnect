@@ -8,7 +8,7 @@ The system integrates three clients (**Web**, **Mobile**, and **Desktop**) commu
 
 ## 🏗️ System Architecture (Sequence Diagrams)
 
-These detailed sequence diagrams trace the exact runtime execution flows, service boundaries, protocols, and database transactions across the microservices:
+These detailed sequence diagrams trace the exact runtime execution flows, service boundaries, protocols, and request/response payloads exchanged between the client apps and backend microservices:
 
 ### 1. Dashboard API Composition & Aggregation Flow (Port 8080)
 ```mermaid
@@ -36,42 +36,42 @@ sequenceDiagram
 
     User->>Client: Open Dashboard
     activate Client
-    Client->>Gateway: GET /api/dashboard (X-Auth-Token: "token_uuid")
+    Client->>Gateway: GET /api/dashboard<br/>Headers: { "X-Auth-Token": "token_uuid" }
     activate Gateway
     
-    Gateway->>DB: Query user_sessions by token
+    Gateway->>DB: Query user_sessions where token = "token_uuid"
     activate DB
-    DB-->>Gateway: Return Session Profile (Role, userId, name)
+    DB-->>Gateway: Return Session Profile: { role: "STUDENT", userId: "B032310001", fullName: "Amin" }
     deactivate DB
 
-    Note over Gateway: API Composition (Concurrent WebClient Requests)
+    Note over Gateway: API Composition (Concurrent WebClient REST Requests)
     
     par Enrolments
-        Gateway->>Enrolment: GET /api/enrol/student/{id}
+        Gateway->>Enrolment: GET /api/enrol/student/1
         activate Enrolment
-        Enrolment-->>Gateway: Return course enrolment list
+        Enrolment-->>Gateway: Return List<Enrolment> JSON array
         deactivate Enrolment
     and Room Bookings
-        Gateway->>Booking: GET /api/bookings/student/{matric}
+        Gateway->>Booking: GET /api/bookings/student/B032310001
         activate Booking
-        Booking-->>Gateway: Return room bookings list
+        Booking-->>Gateway: Return List<RoomBooking> JSON array
         deactivate Booking
     and Book Loans
-        Gateway->>Booking: GET /api/loans/student/{matric}
+        Gateway->>Booking: GET /api/loans/student/B032310001
         activate Booking
-        Booking-->>Gateway: Return library loans list
+        Booking-->>Gateway: Return List<BookLoan> JSON array
         deactivate Booking
     and Notifications
-        Gateway->>Notification: GET /api/notifications/recipient/{matric}
+        Gateway->>Notification: GET /api/notifications/recipient/B032310001
         activate Notification
-        Notification-->>Gateway: Return recipient alert logs
+        Notification-->>Gateway: Return List<Notification> JSON array
         deactivate Notification
     end
 
-    Note over Gateway: Aggregate lists into dashboard response JSON
-    Gateway-->>Client: HTTP 200 OK (Aggregated JSON)
+    Note over Gateway: Aggregates list data into a unified dashboard response map
+    Gateway-->>Client: HTTP 200 OK<br/>JSON Response: { "role": "STUDENT", "profile": { "id": 1, "studentId": "B032310001", "name": "Amin", ... }, "enrolments": [...], "roomBookings": [...], "bookLoans": [...], "notifications": [...] }
     deactivate Gateway
-    Client-->>User: Render Dashboard UI
+    Client-->>User: Render Dashboard UI metrics & tables
     deactivate Client
 ```
 
@@ -99,48 +99,48 @@ sequenceDiagram
         participant DB_Enrolment as :db_enrolment (MySQL)
     end
 
-    User->>Client: Click "Enrol Course"
+    User->>Client: Click "ENROL" on Course Card
     activate Client
-    Client->>Gateway: POST /api/enrol (body: studentId, courseCode)
+    Client->>Gateway: POST /api/enrol<br/>JSON Payload: { "studentId": 1, "courseCode": "BITP3123" }
     activate Gateway
-    Gateway->>Enrolment: Forward POST /api/enrol (HTTP WebClient)
+    Gateway->>Enrolment: Forward POST /api/enrol<br/>JSON Payload: { "studentId": 1, "courseCode": "BITP3123" }
     activate Enrolment
     
     %% Inter-service call to student-service
-    Enrolment->>Gateway: GET /api/students/id/{studentId} (Verify Student)
+    Enrolment->>Gateway: GET /api/students/id/1 (Verify Student)
     activate Gateway
-    Gateway->>DB_Student: Query student profile
+    Gateway->>DB_Student: Query student table where id = 1
     activate DB_Student
-    DB_Student-->>Gateway: Return Student details
+    DB_Student-->>Gateway: Return student details
     deactivate DB_Student
-    Gateway-->>Enrolment: HTTP 200 OK (id, studentId/matric, name)
+    Gateway-->>Enrolment: HTTP 200 OK<br/>JSON Response: { "id": 1, "studentId": "B032310001", "name": "Amin", ... }
     deactivate Gateway
 
     %% Fair locking
     Note over Enrolment: Enrolment Lock acquired (fair ReentrantLock)
-    Enrolment->>DB_Enrolment: Check Course capacity & Duplicate enrolment
+    Enrolment->>DB_Enrolment: Query courses table where code = "BITP3123" (capacity validation)
     activate DB_Enrolment
-    DB_Enrolment-->>Enrolment: Capacity OK & no active enrolment
+    DB_Enrolment-->>Enrolment: Capacity OK & no active enrolment duplicate
     deactivate DB_Enrolment
 
-    Enrolment->>DB_Enrolment: Save Enrolment Record & Increment course.currentCapacity
+    Enrolment->>DB_Enrolment: Insert into enrolments & Increment course.current_capacity
     activate DB_Enrolment
     DB_Enrolment-->>Enrolment: Success
     deactivate DB_Enrolment
     Note over Enrolment: Enrolment Lock released
 
     %% Async notification
-    Enrolment->>Notification: POST /api/notify (Alert Enrolment Success)
+    Enrolment->>Notification: POST /api/notify<br/>JSON Payload: { "type": "ENROLMENT_SUCCESS", "recipientId": "B032310001", "recipientName": "Amin", "message": "Successfully enrolled in BITP3123...", "relatedEntity": "BITP3123" }
     activate Notification
     Note over Notification: Async Fire-and-Forget (.subscribe())
     Notification-->>Enrolment: HTTP 200 OK (Accepted)
     deactivate Notification
     
-    Enrolment-->>Gateway: HTTP 201 Created (Enrolment details)
+    Enrolment-->>Gateway: HTTP 201 Created<br/>JSON Response: { "success": true, "message": "Enrolled successfully", "enrolmentId": 12, "remainingSeats": 27 }
     deactivate Enrolment
-    Gateway-->>Client: HTTP 201 Created
+    Gateway-->>Client: HTTP 201 Created<br/>JSON Response: { "success": true, "message": "Enrolled successfully", "enrolmentId": 12, "remainingSeats": 27 }
     deactivate Gateway
-    Client-->>User: Render "Enrolled Successfully"
+    Client-->>User: Show SnackBar: "Enrolled successfully!"
     deactivate Client
 ```
 
@@ -149,7 +149,7 @@ sequenceDiagram
 sequenceDiagram
     autonumber
     
-    actor Admin as :Admin / Student
+    actor Admin as :Admin
     box rgb(30, 41, 59) "CLIENT LAYER"
         participant Desktop as :Desktop / Mobile Client
     end
@@ -164,33 +164,33 @@ sequenceDiagram
         participant DB_Booking as :db_booking (MySQL)
     end
 
-    Admin->>Desktop: Request Library Transaction (e.g., borrowBook)
+    Admin->>Desktop: Request borrowBook
     activate Desktop
-    Desktop->>Booking: POST /ws/booking (SOAP Envelope with session token)
+    Desktop->>Booking: SOAP HTTP POST /ws/booking<br/>XML SOAP Envelope (parameters: token, studentId, studentName, isbn, dueDate)
     activate Booking
     
     %% Token Verification Call
-    Booking->>Gateway: GET /api/auth/me (Header: X-Auth-Token)
+    Booking->>Gateway: GET /api/auth/me<br/>Headers: { "X-Auth-Token": "admin_token_uuid" }
     activate Gateway
-    Gateway-->>Booking: Return User Session Profile (Role = ADMIN)
+    Gateway-->>Booking: HTTP 200 OK<br/>JSON Response: { "userId": "ADMIN", "role": "ADMIN", "fullName": "Library Admin" }
     deactivate Gateway
 
     %% Transaction Logic
-    Note over Booking: Verify Admin role. Retrieve Book & check status.
-    Booking->>DB_Booking: Save BookLoan & Set Book status = BORROWED
+    Note over Booking: Verify role == ADMIN. Check book availability in db.
+    Booking->>DB_Booking: Insert book_loans record & set books status = "BORROWED"
     activate DB_Booking
     DB_Booking-->>Booking: Success
     deactivate DB_Booking
 
     %% Notification Dispatch
-    Booking->>Notification: POST /api/notify (Alert Book Borrowed)
+    Booking->>Notification: POST /api/notify<br/>JSON Payload: { "type": "BOOK_BORROWED", "recipientId": "studentId", "recipientName": "studentName", "message": "Book borrowed...", "relatedEntity": "reference" }
     activate Notification
     Notification-->>Booking: HTTP 200 OK
     deactivate Notification
 
-    Booking-->>Desktop: SOAP Response (XML: Loan Reference)
+    Booking-->>Desktop: SOAP Response XML Envelope: <return>LN-20260619-381</return>
     deactivate Booking
-    Desktop-->>Admin: Show Loan Details
+    Desktop-->>Admin: Show Loan Details with Loan Reference ID
     deactivate Desktop
 ```
 
