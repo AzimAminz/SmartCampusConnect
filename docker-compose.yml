@@ -1,21 +1,75 @@
-version: '3.8'
-
 services:
   # =========================================================================
-  # 🗄️ MySQL Database Service
+  # 1. Databases (Database-per-Service Pattern)
   # =========================================================================
-  mysql-db:
+  db-student:
     image: mysql:8.0
-    container_name: smartcampus-mysql
+    container_name: smartcampus-db-student
     restart: always
     ports:
-      - "${FORWARD_DB_PORT:-3306}:3306"
+      - "${FORWARD_DB_STUDENT_PORT:-3306}:3306"
     environment:
-      MYSQL_DATABASE: "${DB_DATABASE:-smartcampus}"
-      MYSQL_ROOT_PASSWORD: "${DB_PASSWORD}"
+      MYSQL_DATABASE: db_student
       MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
     volumes:
-      - mysql_data:/var/lib/mysql
+      - db_student_data:/var/lib/mysql
+    networks:
+      - smartcampus-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  db-enrolment:
+    image: mysql:8.0
+    container_name: smartcampus-db-enrolment
+    restart: always
+    ports:
+      - "${FORWARD_DB_ENROLMENT_PORT:-3307}:3306"
+    environment:
+      MYSQL_DATABASE: db_enrolment
+      MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
+    volumes:
+      - db_enrolment_data:/var/lib/mysql
+    networks:
+      - smartcampus-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  db-booking:
+    image: mysql:8.0
+    container_name: smartcampus-db-booking
+    restart: always
+    ports:
+      - "${FORWARD_DB_BOOKING_PORT:-3308}:3306"
+    environment:
+      MYSQL_DATABASE: db_booking
+      MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
+    volumes:
+      - db_booking_data:/var/lib/mysql
+    networks:
+      - smartcampus-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  db-notification:
+    image: mysql:8.0
+    container_name: smartcampus-db-notification
+    restart: always
+    ports:
+      - "${FORWARD_DB_NOTIFICATION_PORT:-3309}:3306"
+    environment:
+      MYSQL_DATABASE: db_notification
+      MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
+    volumes:
+      - db_notification_data:/var/lib/mysql
     networks:
       - smartcampus-network
     healthcheck:
@@ -25,48 +79,104 @@ services:
       retries: 5
 
   # =========================================================================
-  # ☕ Spring Boot Backend API Service
-  #
-  # Exposes three ports:
-  #   - 8080 : REST API (Spring Boot HTTP server)
-  #   - 8085 : SOAP/WSDL Endpoint (JAX-WS, published via jakarta.xml.ws.Endpoint)
-  #   - 9090 : Notification TCP Socket Server (Producer-Consumer messaging - R6)
-  #
-  # Uses the Maven wrapper (./mvnw) so NO local Java installation is required.
+  # 2. Microservices
   # =========================================================================
-  backend-api:
+  student-service:
     image: maven:3.8.5-openjdk-17
-    container_name: smartcampus-backend
+    container_name: student-service
     restart: always
     ports:
-      - "${FORWARD_API_PORT:-8080}:8080"        # REST API
-      - "${FORWARD_SOAP_PORT:-8085}:8085"       # SOAP/WSDL Legacy Booking Service 
-      - "${FORWARD_NOTIFY_PORT:-9090}:9090"     # TCP Socket Notification Server 
+      - "${FORWARD_STUDENT_PORT:-8080}:8080"
     working_dir: /app
     volumes:
       - ./backend:/app
       - maven_cache:/root/.m2
     command: ./mvnw spring-boot:run
     environment:
-      SPRING_DATASOURCE_URL: "jdbc:mysql://mysql-db:3306/${DB_DATABASE:-smartcampus}?createDatabaseIfNotExist=true&allowPublicKeyRetrieval=true&useSSL=false"
+      SPRING_DATASOURCE_URL: "jdbc:mysql://db-student:3306/db_student?createDatabaseIfNotExist=true&allowPublicKeyRetrieval=true&useSSL=false"
       SPRING_DATASOURCE_USERNAME: "${DB_USERNAME:-root}"
       SPRING_DATASOURCE_PASSWORD: "${DB_PASSWORD:-}"
-      SPRING_JPA_HIBERNATE_DDL_AUTO: "update"
-      SPRING_JPA_SHOW_SQL: "true"
-      SPRING_JPA_PROPERTIES_HIBERNATE_DIALECT: "org.hibernate.dialect.MySQLDialect"
-      # Custom port bindings passed as JVM env (optional override)
-      SOAP_SERVER_PORT: "${FORWARD_SOAP_PORT:-8085}"
-      NOTIFY_SERVER_PORT: "${FORWARD_NOTIFY_PORT:-9090}"
-      NOTIFY_SERVER_HOST: "localhost"
+      ENROLMENT_SERVICE_URL: "http://enrolment-service:8081"
+      BOOKING_SERVICE_URL: "http://booking-service:8082"
+      NOTIFY_SERVICE_URL: "http://notification-service:8083"
     depends_on:
-      mysql-db:
+      db-student:
+        condition: service_healthy
+    networks:
+      - smartcampus-network
+
+  enrolment-service:
+    image: maven:3.8.5-openjdk-17
+    container_name: enrolment-service
+    restart: always
+    ports:
+      - "${FORWARD_ENROLMENT_PORT:-8081}:8081"
+    working_dir: /app
+    volumes:
+      - ./enrolment-service:/app
+      - maven_cache:/root/.m2
+    command: ./mvnw spring-boot:run
+    environment:
+      SPRING_DATASOURCE_URL: "jdbc:mysql://db-enrolment:3306/db_enrolment?createDatabaseIfNotExist=true&allowPublicKeyRetrieval=true&useSSL=false"
+      SPRING_DATASOURCE_USERNAME: "${DB_USERNAME:-root}"
+      SPRING_DATASOURCE_PASSWORD: "${DB_PASSWORD:-}"
+      STUDENT_SERVICE_URL: "http://student-service:8080"
+      NOTIFY_SERVICE_URL: "http://notification-service:8083"
+    depends_on:
+      db-enrolment:
+        condition: service_healthy
+    networks:
+      - smartcampus-network
+
+  booking-service:
+    image: maven:3.8.5-openjdk-17
+    container_name: booking-service
+    restart: always
+    ports:
+      - "${FORWARD_BOOKING_PORT:-8082}:8082"
+      - "${FORWARD_SOAP_PORT:-8085}:8085"
+    working_dir: /app
+    volumes:
+      - ./booking-service:/app
+      - maven_cache:/root/.m2
+    command: ./mvnw spring-boot:run
+    environment:
+      SPRING_DATASOURCE_URL: "jdbc:mysql://db-booking:3306/db_booking?createDatabaseIfNotExist=true&allowPublicKeyRetrieval=true&useSSL=false"
+      SPRING_DATASOURCE_USERNAME: "${DB_USERNAME:-root}"
+      SPRING_DATASOURCE_PASSWORD: "${DB_PASSWORD:-}"
+      SOAP_SERVER_PORT: "${FORWARD_SOAP_PORT:-8085}"
+      NOTIFY_SERVICE_URL: "http://notification-service:8083"
+    depends_on:
+      db-booking:
+        condition: service_healthy
+    networks:
+      - smartcampus-network
+
+  notification-service:
+    image: maven:3.8.5-openjdk-17
+    container_name: notification-service
+    restart: always
+    ports:
+      - "${FORWARD_NOTIFICATION_PORT:-8083}:8083"
+      - "${FORWARD_NOTIFY_PORT:-9090}:9090"
+    working_dir: /app
+    volumes:
+      - ./notification-service:/app
+      - maven_cache:/root/.m2
+    command: ./mvnw spring-boot:run
+    environment:
+      SPRING_DATASOURCE_URL: "jdbc:mysql://db-notification:3306/db_notification?createDatabaseIfNotExist=true&allowPublicKeyRetrieval=true&useSSL=false"
+      SPRING_DATASOURCE_USERNAME: "${DB_USERNAME:-root}"
+      SPRING_DATASOURCE_PASSWORD: "${DB_PASSWORD:-}"
+      NOTIFY_SERVER_PORT: "${FORWARD_NOTIFY_PORT:-9090}"
+    depends_on:
+      db-notification:
         condition: service_healthy
     networks:
       - smartcampus-network
 
   # =========================================================================
-  # 🌐 Nginx Web Frontend Service
-  # Serves the vanilla HTML/CSS/JS SPA on port 3000
+  # 3. Web Frontend
   # =========================================================================
   web-frontend:
     image: nginx:alpine
@@ -77,7 +187,7 @@ services:
     volumes:
       - ./web:/usr/share/nginx/html
     depends_on:
-      - backend-api
+      - student-service
     networks:
       - smartcampus-network
 
@@ -86,7 +196,13 @@ networks:
     driver: bridge
 
 volumes:
-  mysql_data:
+  db_student_data:
+    driver: local
+  db_enrolment_data:
+    driver: local
+  db_booking_data:
+    driver: local
+  db_notification_data:
     driver: local
   maven_cache:
     driver: local

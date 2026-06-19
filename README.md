@@ -1,14 +1,14 @@
-# 🎓 Smart Campus Connect
+# 🎓 Smart Campus Connect (Microservices Architecture)
 
-Smart Campus Connect is a distributed, multi-platform campus management system. It provides campus automation services across three different clients (**Web**, **Mobile**, and **Desktop**) communicating with a central Spring Boot REST API and a MySQL database.
+SmartCampus Connect is a distributed, multi-platform campus management system. It has been refactored from a monolithic backend to a fully decoupled **Microservices / Service-Oriented Architecture (SOA)**, satisfying database isolation per service, inter-service API orchestration/composition, multithreading protections, and multi-protocol clients (REST + SOAP).
 
-Whether you are a developer, a student, or an absolute beginner, this guide will help you set up and run the entire system from scratch, step-by-step.
+It provides campus automation services across three different clients (**Web**, **Mobile**, and **Desktop**) communicating with the gateway microservice API and a set of dedicated MySQL databases.
 
 ---
 
 ## 🏗️ System Architecture & Services
 
-The system is designed with a modern distributed architecture containing the following components:
+The system is designed with a decoupled microservices architecture containing the following components:
 
 ```mermaid
 graph TD
@@ -19,870 +19,98 @@ graph TD
     Web[🌐 Web Frontend - Vanilla JS SPA]:::client
     Mobile[📱 Mobile Client - Flutter App]:::client
     Desktop[💻 Desktop Client - Java Swing App]:::client
-    Backend[☕ Backend API - Spring Boot]:::server
-    DB[(🗄️ Database - MySQL 8.0)]:::db
+    
+    Gateway[☕ Student Service / REST Gateway - Port 8080]:::server
+    Enrolment[☕ Enrolment Service - Port 8081]:::server
+    Booking[☕ Booking Service - Port 8082 / SOAP 8085]:::server
+    Notification[☕ Notification Service - Port 8083 / TCP 9090]:::server
 
-    Web -->|JSON REST API & SOAP| Backend
-    Mobile -->|JSON REST API & SOAP| Backend
-    Desktop -->|JSON REST API & SOAP| Backend
-    Backend -->|Spring Data JPA| DB
+    DB_Student[(🗄️ db_student)]:::db
+    DB_Enrolment[(🗄️ db_enrolment)]:::db
+    DB_Booking[(🗄️ db_booking)]:::db
+    DB_Notification[(🗄️ db_notification)]:::db
+
+    Web -->|JSON REST API| Gateway
+    Mobile -->|JSON REST API| Gateway
+    Desktop -->|JSON REST API| Gateway
+    
+    Mobile -->|SOAP/WSDL| Booking
+    Desktop -->|SOAP/WSDL| Booking
+    
+    Gateway -->|Spring Data JPA| DB_Student
+    Enrolment -->|Spring Data JPA| DB_Enrolment
+    Booking -->|Spring Data JPA| DB_Booking
+    Notification -->|Spring Data JPA| DB_Notification
+
+    Gateway -->|HTTP WebClient| Enrolment
+    Gateway -->|HTTP WebClient| Booking
+    Gateway -->|HTTP WebClient| Notification
+    
+    Enrolment -->|HTTP WebClient| Gateway
+    Enrolment -->|HTTP WebClient| Notification
+    
+    Booking -->|HTTP WebClient| Notification
 ```
 
-1. **Backend API (`/backend`)**: Built with **Java Spring Boot (JDK 17)** and **Spring Data JPA**. It handles the business logic, security, and database operations.
-2. **Database (`MySQL 8.0`)**: Stores all campus data such as users, courses, bookings, and profiles.
-3. **Web Client (`/web`)**: A lightweight, premium Single Page Application (SPA) built using **Vanilla HTML, CSS, and Modern ES6 JavaScript** (served via **Nginx**).
-4. **Mobile Client (`/mobile`)**: A cross-platform mobile app built using the **Flutter SDK** (supports Android and iOS).
-5. **Desktop Client (`/desktop`)**: A local desktop application built using **Java Swing** for admin/staff use.
+1. **Student Service (`/backend`) [Port 8080]**: Handles student profiles, authentication, sessions, acts as the API Gateway/Proxy, and hosts the Personal Dashboard aggregator. Connects to `db_student`.
+2. **Enrolment Service (`/enrolment-service`) [Port 8081]**: Exposes course registration, capacity checks, and load test endpoints. Connects to `db_enrolment`.
+3. **Booking Service (`/booking-service`) [Port 8082 REST / Port 8085 SOAP]**: Exposes library catalog Search and Room/Book bookings. Connects to `db_booking`.
+4. **Notification Service (`/notification-service`) [Port 8083 HTTP / Port 9090 TCP]**: Implements the asynchronous notification logger. Connects to `db_notification`.
+5. **Web Client (`/web`)**: Served via **Nginx** on port `3000`.
+6. **Mobile Client (`/mobile`)**: Flutter client calling REST APIs via the gateway and SOAP via port 8085.
+7. **Desktop Client (`/desktop`)**: Swing client calling REST APIs via the gateway and SOAP via port 8085.
 
 ---
 
 ## 🎓 Coursework Compliance Matrix (R1 - R10)
 
-This system is designed specifically to fulfill all **10 Technical Requirements (R1 - R10)** of the *BITP3123 Distributed Application Development* group project. Below is a detailed mapping of the architectural design decisions and implementation locations:
-
 | Requirement | Concept (Week) | Implementation Details & Mapping |
 | :--- | :--- | :--- |
-| **R1: System Characterisation** | Week 1 | • **Transparencies**: Location & Access (REST/SOAP Gateway routes), Concurrency (thread-pooled request dispatching).<br>• **Failure Mitigation**: Graceful degradation (buffered messaging) and REST circuit-breaker fallbacks. |
-| **R2: Architectural Pattern** | Week 2 | • **Multi-tier Client-Server**: Separates client presentations (Web, Desktop, Mobile) from transaction processing (Spring Boot) and persistence (MySQL). |
-| **R3: SOA Principles** | Week 3 | • Exposes independent services: Student Profile, Course Enrolment, Library/Booking, Notifications, and Reporting.<br>• **Database-per-Service**: Ensures strict decoupling (each component has isolated database volumes). |
-| **R4: Service Composition** | Week 3 | • **Event Choreography**: Course Enrolment publishes transactional events to a distributed channel, which the **Notification** and **Reporting** services consume asynchronously to trigger actions. |
-| **R5: Multithreaded Server** | Week 4 | • Core services utilize an `ExecutorService` thread pool to manage intensive concurrent client connections (e.g. course registrations or room bookings).<br>• Protected shared mutable state (e.g., Course Seat Capacity) using thread-safe synchronization primitives (`ReentrantLock` / `java.util.concurrent`). |
-| **R6: Distributed Messaging** | Week 5 | • Implements asynchronous, non-blocking workflows using a message bus broker (RabbitMQ) or raw TCP sockets in a Producer-Consumer pattern.<br>• Fully defines and documents binary/JSON framing formats in the code. |
-| **R7: REST API** | Week 6 | • Primary services expose standard RESTful endpoints.<br>• Uses proper HTTP verbs (`GET`, `POST`, `PUT`, `DELETE`) and handles REST status responses (`200 OK`, `201 Created`, `204 No Content`, `400 Bad Request`, `404 Not Found`).<br>• Includes a workspace Postman Collection at `/backend/SmartCampusConnect.postman_collection.json`. |
-| **R8: SOAP Service** | Week 7 | • Legacy system integration simulated in the **Library/Booking Service** by exposing SOAP/WSDL endpoints using JAX-WS for checking system books or room loan states.<br>• Supports standard WSDL auto-generation and handles custom SOAP Faults. |
-| **R9: Failure Handling** | Weeks 1, 4 | • Mitigates system faults using client-side timeouts, exponential backoff/retries with idempotent actions, and circuit-breaker switches. |
-| **R10: Version Control & Build** | Engineering Practice | • Clean single Git repository with a rich, collaborative commit history.<br>• Single-command build and boot via `docker-compose up --build` allowing instructors/markers to deploy the entire ecosystem in under 15 minutes! |
+| **R1: System Characterisation** | Week 1 | • Decoupled Microservices with location/access transparency via Gateway Proxies.<br>• Graceful degradation and connection mitigation using decoupled HTTP WebClient fallbacks. |
+| **R2: Architectural Pattern** | Week 2 | • **Multi-tier Microservices**: Separates client presentations from business logic layers and isolates persistence stores. |
+| **R3: SOA Principles** | Week 3 | • Strict separation of services: Student, Enrolment, Booking/Library, and Notifications.<br>• **Database-per-Service**: Decoupled databases (`db_student`, `db_enrolment`, `db_booking`, `db_notification`). |
+| **R4: Service Composition** | Week 3 | • Student Service (Dashboard) orchestrates REST aggregation across three other microservices to render the client personal board.<br>• Enrolment and Booking services compose with Notification Service via async-like HTTP calls. |
+| **R5: Multithreaded Server** | Week 4 | • enrolment-service utilizes a fairness-mode `ReentrantLock` to protect course capacity concurrency states during registration load tests. |
+| **R6: Distributed Messaging** | Week 5 | • Implements a custom non-blocking notification server listening on TCP Socket port `9090` (Producer-Consumer pattern). |
+| **R7: REST API** | Week 6 | • Microservices expose clean HTTP/REST APIs. Gateway Proxy Controllers routing to `/api/enrol`, `/api/courses`, and `/api/notifications` ensure complete frontend compatibility. |
+| **R8: SOAP Service** | Week 7 | • Legacy system SOAP/WSDL endpoints exposed in **booking-service** on port `8085` using JAX-WS. |
+| **R9: Failure Handling** | Weeks 1, 4 | • Isolated microservices prevent cascade failures; failing to query one service fallback to empty list data without crashing the dashboard. |
+| **R10: Version Control & Build** | Engineering Practice | • Decoupled build containers configured in `docker-compose.yml` allowing single-command startup. |
 
 ---
 
-## 🌐 API Reference — REST & SOAP Endpoints
+## ⚡ Running with Docker (Highly Recommended)
 
-This section lists **all available API endpoints** exposed by the SmartCampus Connect backend. There are two types of APIs used:
-- **REST API** (port `8080`) — for all primary CRUD and business services
-- **SOAP/WSDL API** (port `8085`) — for the Legacy Library/Booking Service
+Make sure **Docker Desktop** is open and running, then execute:
 
----
-
-### 🔐 Auth Service (REST)
-**Base URL**: `http://localhost:8080/api/auth`
-
-Sistem login menggunakan **ID sahaja — tiada password diperlukan**.
-- Pelajar login menggunakan **no. matrik** (cth: `B032310001`)
-- Admin login menggunakan ID tetap **`ADMIN`**
-
-Token UUID diterima selepas login. Gunakan token ini sebagai header `X-Auth-Token` untuk semua request yang memerlukan pengesahan.
-
-| Method | Endpoint | Description | Response |
-| :--- | :--- | :--- | :--- |
-| `POST` | `/api/auth/login` | Login dengan userId (matrik atau ADMIN) | `200 OK` — token, role, nama |
-| `GET` | `/api/auth/me` | Semak siapa yang sedang login | `200 OK` atau `401 Unauthorized` |
-| `POST` | `/api/auth/logout` | Logout dan hapus sesi | `200 OK` |
-
-**Contoh `POST /api/auth/login` Request Body (Pelajar):**
-```json
-{ "userId": "B032310001" }
-```
-
-**Contoh `POST /api/auth/login` Request Body (Admin):**
-```json
-{ "userId": "ADMIN" }
-```
-
-**Contoh Response Berjaya:**
-```json
-{
-  "token": "550e8400-e29b-41d4-a716-446655440000",
-  "userId": "B032310001",
-  "role": "STUDENT",
-  "fullName": "Muhammad Azim bin Aminudin",
-  "expiresAt": "2026-05-26T22:49:38",
-  "message": "Login successful. Welcome, Muhammad Azim bin Aminudin!"
-}
-```
-
-> [!NOTE]
-> Sertakan token di header setiap request yang memerlukan login:
-> ```
-> X-Auth-Token: 550e8400-e29b-41d4-a716-446655440000
-> ```
-
----
-
-### 📊 Dashboard Service (REST)
-**Base URL**: `http://localhost:8080/api/dashboard`
-
-| Method | Endpoint | Description | Response |
-| :--- | :--- | :--- | :--- |
-| `GET` | `/api/dashboard` | Lihat semua data peribadi (pelajar) atau statistik sistem (admin) | `200 OK` |
-
-Pelajar akan menerima: **profil + enrolment aktif + tempahan bilik + pinjaman buku + notifikasi**.
-Admin akan menerima: **ringkasan statistik + semua pinjaman + semua tempahan**.
-
-> [!IMPORTANT]
-> Endpoint ini memerlukan header `X-Auth-Token`. Login dahulu untuk dapatkan token.
-
----
-
-### 👤 Student Profile Service (REST)
-**Base URL**: `http://localhost:8080/api/students`
-
-| Method | Endpoint | Description | Response |
-| :--- | :--- | :--- | :--- |
-| `GET` | `/api/students` | Get all students | `200 OK` — JSON Array |
-| `GET` | `/api/students/{id}` | Get a specific student by ID | `200 OK` or `404 Not Found` |
-| `POST` | `/api/students` | Register a new student | `201 Created` — JSON Object |
-| `PUT` | `/api/students/{id}` | Update an existing student's info | `200 OK` or `404 Not Found` |
-| `DELETE` | `/api/students/{id}` | Remove a student record | `204 No Content` or `404 Not Found` |
-
-**Contoh `POST /api/students` Request Body (Student ID is Server-Generated):**
-```json
-{
-  "name": "Ahmad Azim",
-  "email": "azim@student.utem.edu.my",
-  "programmeCode": "B",
-  "programme": "Bachelor of Computer Science (Hons)",
-  "faculty": "FTMK",
-  "semester": "1",
-  "gpa": 3.75,
-  "phoneNumber": "0123456789"
-}
-```
-
-> [!NOTE]
-> Student ID is **automatically generated** by the backend service thread-safely via a `ReentrantLock` (FIFO fair scheduling) to prevent ID conflicts between concurrent web, mobile, and desktop client registrations. Additionally:
-> 1. **Add Student**: Automatically creates a login `User` credential account in the database so the student can log in instantly.
-> 2. **Update Student**: Syncs name changes to the authentication `User` account's `fullName`.
-> 3. **Delete Student**: Cascades to delete the student profile, remove their login credentials, and invalidate all active session tokens immediately.
-
----
-
-
-### 📚 Course & Enrolment Service (REST)
-**Base URL**: `http://localhost:8080/api`
-
-| Method | Endpoint | Description | Response |
-| :--- | :--- | :--- | :--- |
-| `GET` | `/api/courses` | Get all available courses | `200 OK` — JSON Array |
-| `GET` | `/api/courses/{id}` | Get course by database ID | `200 OK` or `404 Not Found` |
-| `GET` | `/api/courses/code/{courseCode}` | Get course by course code | `200 OK` or `404 Not Found` |
-| `POST` | `/api/courses` | Create a new course | `201 Created` |
-| `PUT` | `/api/courses/{id}` | Update course info | `200 OK` or `404 Not Found` |
-| `DELETE` | `/api/courses/{id}` | Delete a course | `200 OK` or `404 Not Found` |
-| `POST` | `/api/enrol` | Enrol a student into a course | `201 Created` or `400 Bad Request` |
-| `GET` | `/api/enrol/student/{studentId}` | List all enrolments for a student | `200 OK` |
-| `GET` | `/api/enrol/course/{courseCode}` | List all students enrolled in a course | `200 OK` |
-| `DELETE` | `/api/enrol/{studentId}/{courseCode}` | Drop a student from a course | `200 OK` |
-| `POST` | `/api/enrol/load-test/{courseCode}` | Simulate 10 concurrent enrolments (R5 Demo) | `200 OK` with thread results |
-
-**Example `POST /api/enrol` Request Body:**
-```json
-{
-  "studentId": 1,
-  "courseCode": "CS301"
-}
-```
-
-> [!NOTE]
-> The `/api/enrol` endpoint is protected internally by a **`ReentrantLock`** to prevent race conditions on course seat capacity — demonstrating **R5 (Multithreaded / Concurrent State Protection)**.
-
----
-
-### 📊 Reporting & Analytics Service (REST)
-**Base URL**: `http://localhost:8080/api/reporting`
-
-| Method | Endpoint | Description | Response |
-| :--- | :--- | :--- | :--- |
-| `GET` | `/api/reporting/stats` | Get overall campus statistics (total students, total enrolments, course capacity fill rates) | `200 OK` — JSON summary |
-| `GET` | `/api/reporting/enrolments-per-course` | Enrolment count grouped per course code | `200 OK` — JSON Array |
-
-**Example Response for `/api/reporting/stats`:**
-```json
-{
-  "totalStudents": 120,
-  "totalEnrolments": 310,
-  "totalCourses": 15,
-  "averageCapacityUsed": "68.7%"
-}
-```
-
-> [!NOTE]
-> This service demonstrates **R4 (Service Composition via Orchestration)** — it internally queries the Student and Enrolment services and combines results into a single analytical response.
-
----
-
-### 🔔 Notification Service (Asynchronous TCP Socket — R6)
-
-The Notification Service is **not exposed via HTTP**. It runs as an asynchronous **TCP Server** on port `9090` inside the backend process.
-
-| Type | Port | Protocol | Direction | Description |
-| :--- | :--- | :--- | :--- | :--- |
-| TCP Socket Server | `9090` | Raw TCP + JSON payload | Internal only | Receives events from Enrolment and Booking services and logs alert notifications |
-
-Whenever a successful enrolment or room booking occurs, the backend services act as **TCP Producers** and push a JSON payload to this internal TCP Consumer server. Example payload:
-```json
-{
-  "type": "ENROLMENT",
-  "studentId": 1,
-  "courseCode": "CS301",
-  "message": "Student Ahmad Azim has been enrolled in CS301",
-  "timestamp": "2025-05-25T12:00:00"
-}
-```
-
----
-
-### 🏛️ Library / Booking Service — SOAP/WSDL (Legacy Integration — R8)
-**SOAP Endpoint URL**: `http://localhost:8085/ws/booking`  
-**WSDL Auto-generated at**: `http://localhost:8085/ws/booking?wsdl`
-
-This service simulates integration with a **legacy campus booking system** using **JAX-WS SOAP over HTTP**.
-
-| Operation | Method Name | Input Parameters | Return | SOAP Fault |
-| :--- | :--- | :--- | :--- | :--- |
-| Tempah Bilik | `bookRoom` | `studentId`, `studentName`, `roomName`, `slot`, `date` (yyyy-MM-dd), `purpose` | Booking reference string | Bilik + slot + tarikh sudah ditempah |
-| Semak Kekosongan | `checkAvailability` | `roomName`, `slot`, `date` | `true` (tersedia) atau `false` | — |
-| Batalkan Tempahan | `cancelBooking` | `bookingRef` | `true` | Ref tidak wujud atau sudah dibatalkan |
-| Pinjam Buku (Admin) | `borrowBook` | `token`, `studentId`, `studentName`, `isbn`, `dueDate` (yyyy-MM-dd) | Loan reference string | Buku sudah dipinjam, tiada dalam katalog, atau due date lampau |
-| Pulangkan Buku (Admin) | `returnBook` | `token`, `loanRef` | `true` | Sesi tidak sah atau buku sudah dipulangkan |
-| Tambah Buku (Admin) | `addBook` | `token`, `isbn`, `title`, `author`, `category` | `true` | ISBN bertindih atau sesi tidak sah |
-| Cari Buku (Pelajar/Admin) | `searchBooks` | `query` (kata carian atau kosong untuk semua) | List of `Book` | — |
-| Sejarah Buku (Admin) | `getBookLoanHistory` | `token`, `isbn` | List of `BookLoan` | Sesi tidak sah atau bukan admin |
-| Sejarah Pelajar (Pelajar/Admin) | `getStudentLoanHistory` | `token`, `studentId` | List of `BookLoan` | Sesi tidak sah atau carian pelajar lain |
-
-**How to test using cURL:**
 ```bash
-curl -X POST http://localhost:8085/ws/booking \
-  -H "Content-Type: text/xml" \
-  -d '
-<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ws="http://smartcampus.backend/ws">
-   <soapenv:Header/>
-   <soapenv:Body>
-      <ws:bookRoom>
-         <studentId>1</studentId>
-         <roomName>DK-A</roomName>
-         <slot>Monday 9AM-11AM</slot>
-      </ws:bookRoom>
-   </soapenv:Body>
-</soapenv:Envelope>'
+docker-compose up --build
 ```
 
-**Expected SOAP Fault (when room is already booked):**
-```xml
-<S:Envelope xmlns:S="http://schemas.xmlsoap.org/soap/envelope/">
-   <S:Body>
-      <S:Fault>
-         <faultcode>S:Server</faultcode>
-         <faultstring>Room DK-A is already booked for slot Monday 9AM-11AM.</faultstring>
-      </S:Fault>
-   </S:Body>
-</S:Envelope>
-```
-
-> [!TIP]
-> You can also test the SOAP service visually using **SoapUI** (free) or **Postman** (supports SOAP requests). Simply import the WSDL from `http://localhost:8085/ws/booking?wsdl`.
-
----
-
-### 🔗 Quick Reference Summary Table
-
-| Service | Protocol | Base URL | Port |
-| :--- | :--- | :--- | :--- |
-| Student Profile Service | **REST** | `http://localhost:8080/api/students` | `8080` |
-| Course Management | **REST** | `http://localhost:8080/api/courses` | `8080` |
-| Course Enrolment | **REST** | `http://localhost:8080/api/enrol` | `8080` |
-| Reporting & Analytics | **REST** | `http://localhost:8080/api/reporting` | `8080` |
-| Notification Service | **TCP Socket** | `tcp://localhost:9090` (Internal) | `9090` |
-| Library / Room Booking | **SOAP/WSDL** | `http://localhost:8085/ws/booking` | `8085` |
-| WSDL Definition File | **SOAP/WSDL** | `http://localhost:8085/ws/booking?wsdl` | `8085` |
-
----
-
-## 🗄️ Database Schema
-
-The system uses a **single MySQL database (`smartcampus`)** where each service operates on its own set of tables — simulating the *database-per-service* principle of SOA (R3).
-
-> [!NOTE]
-> Tables are **auto-created by Hibernate/JPA** when the Spring Boot backend starts (`ddl-auto=update`). The raw SQL schema is also available at [`backend/src/main/resources/schema.sql`](file:///Users/azimamin/Documents/utem/degree/sem%201/BITP3123%20DISTRIBUTED%20APPLICATION%20DEVELOPMENT/SmartCampusConnect/backend/src/main/resources/schema.sql) for manual setup or reference.
-
----
-
-### 🔄 MySQL Database Migration Guide (Manual Setup)
-
-By default, the Spring Boot application handles database setup automatically using Hibernate's `ddl-auto=update` configuration. However, if you need to manually migrate the database, seed new data, or run the schema SQL script, you can do so using the following methods:
-
-#### Option 1: If using Docker (Recommended)
-You can pipe the `schema.sql` directly into the running MySQL container. Run this command from the project root directory:
-```bash
-docker exec -i smartcampus-mysql mysql -u root -psmartcampus123 smartcampus < backend/src/main/resources/schema.sql
-```
-*(Make sure the containers are running with `docker-compose up -d` before executing this command).*
-
-#### Option 2: If running MySQL locally (Manual Setup)
-If you have MySQL installed on your local host (e.g. via XAMPP, Homebrew, or standard installer), run these commands:
-
-1. Log in to your local MySQL CLI:
-   ```bash
-   mysql -u root -p
-   ```
-   *(Enter your local MySQL password if prompted).*
-
-2. Create the database (if not exists):
-   ```sql
-   CREATE DATABASE IF NOT EXISTS smartcampus;
-   USE smartcampus;
-   ```
-
-3. Import the `schema.sql` file:
-   ```bash
-   mysql -u root -p smartcampus < backend/src/main/resources/schema.sql
-   ```
-   *(Or on Windows Command Prompt/PowerShell: `mysql -u root -p smartcampus < backend\src\main\resources\schema.sql`)*
-
-#### Option 3: Accessing the Database CLI directly
-To access the MySQL prompt inside the running Docker container to inspect tables manually:
-```bash
-docker exec -it smartcampus-mysql mysql -u root -psmartcampus123 smartcampus
-```
-Once inside, you can run normal SQL commands such as:
-```sql
-SHOW TABLES;
-SELECT * FROM users;
-SELECT * FROM students;
-SELECT * FROM user_sessions;
-```
-
----
-
-### Table 1: `users` — Auth Service (REST)
-
-| Column | Type | Constraint | Description |
-| :--- | :--- | :--- | :--- |
-| `id` | BIGINT | PK, AUTO_INCREMENT | Internal surrogate key |
-| `user_id` | VARCHAR(20) | UNIQUE, NOT NULL | Official student matric number or "ADMIN" |
-| `role` | ENUM('STUDENT','ADMIN') | NOT NULL, DEFAULT 'STUDENT' | Role of the user defining access level |
-| `full_name` | VARCHAR(100) | — | Display name of the user |
-| `created_at` | DATETIME | NOT NULL | Record creation timestamp |
-
----
-
-### Table 2: `user_sessions` — Auth Service (REST)
-
-| Column | Type | Constraint | Description |
-| :--- | :--- | :--- | :--- |
-| `id` | BIGINT | PK, AUTO_INCREMENT | Internal surrogate key |
-| `token` | VARCHAR(100) | UNIQUE, NOT NULL | UUID token returned after successful login |
-| `user_id` | VARCHAR(20) | NOT NULL, INDEX | Matric number or ADMIN (logical FK) |
-| `role` | ENUM('STUDENT','ADMIN') | NOT NULL | Role of the session user |
-| `full_name` | VARCHAR(100) | — | Cached user full name for rapid verification |
-| `created_at` | DATETIME | NOT NULL | Session creation timestamp |
-| `expires_at` | DATETIME | NOT NULL | Session expiration timestamp (24 hours duration) |
-
----
-
-### Table 3: `students` — Student Profile Service (REST)
-
-| Column | Type | Constraint | Description |
-| :--- | :--- | :--- | :--- |
-| `id` | BIGINT | PK, AUTO_INCREMENT | Internal surrogate key |
-| `student_id` | VARCHAR(20) | UNIQUE, NOT NULL | Official matric number e.g. B032310001 |
-| `name` | VARCHAR(100) | NOT NULL | Full name |
-| `email` | VARCHAR(150) | UNIQUE, NOT NULL | Institutional email |
-| `programme` | VARCHAR(100) | — | Degree programme e.g. Bachelor of Computer Science |
-| `faculty` | VARCHAR(50) | — | Faculty code e.g. FTMK |
-| `semester` | VARCHAR(10) | NOT NULL | Current semester number |
-| `gpa` | DECIMAL(4,2) | — | Cumulative GPA |
-| `phone_number` | VARCHAR(15) | — | Contact number |
-| `created_at` | DATETIME | NOT NULL | Record creation timestamp |
-| `updated_at` | DATETIME | — | Last update timestamp |
-
----
-
-### Table 4: `courses` — Course Enrolment Service (REST)
-
-| Column | Type | Constraint | Description |
-| :--- | :--- | :--- | :--- |
-| `id` | BIGINT | PK, AUTO_INCREMENT | Internal surrogate key |
-| `course_code` | VARCHAR(20) | UNIQUE, NOT NULL | Course code e.g. BITP3123 |
-| `course_title` | VARCHAR(150) | NOT NULL | Full course name |
-| `lecturer` | VARCHAR(100) | — | Lecturer name |
-| `faculty` | VARCHAR(50) | — | Faculty offering the course |
-| `credit_hours` | INT | NOT NULL, DEFAULT 3 | Credit hours |
-| `current_capacity` | INT | NOT NULL, DEFAULT 0 | ⚠️ **Shared mutable state — protected by `ReentrantLock` (R5)** |
-| `max_capacity` | INT | NOT NULL, DEFAULT 30 | Maximum allowed enrolments |
-| `semester` | VARCHAR(20) | — | Offering semester e.g. 2024/2025 SEM 2 |
-| `created_at` | DATETIME | NOT NULL | Record creation timestamp |
-
----
-
-### Table 5: `enrolments` — Course Enrolment Service (REST)
-
-| Column | Type | Constraint | Description |
-| :--- | :--- | :--- | :--- |
-| `id` | BIGINT | PK, AUTO_INCREMENT | Internal surrogate key |
-| `student_id` | BIGINT | NOT NULL, INDEX | Reference to `students.id` |
-| `course_code` | VARCHAR(20) | NOT NULL, INDEX | Reference to `courses.course_code` |
-| `student_name` | VARCHAR(100) | — | Denormalized student name (display) |
-| `course_title` | VARCHAR(150) | — | Denormalized course title (display) |
-| `status` | ENUM | NOT NULL | `ACTIVE` / `DROPPED` / `COMPLETED` |
-| `enrolled_at` | DATETIME | NOT NULL | Timestamp of enrolment |
-| `dropped_at` | DATETIME | — | Timestamp of course drop (if applicable) |
-| — | UNIQUE | `(student_id, course_code)` | Prevents duplicate enrolment |
-
-> [!NOTE]
-> A successful enrolment fires a **TCP socket event** to the Notification Service (R4, R6).
-
----
-
-### Table 6: `room_bookings` — Library/Booking Service (SOAP)
-
-| Column | Type | Constraint | Description |
-| :--- | :--- | :--- | :--- |
-| `id` | BIGINT | PK, AUTO_INCREMENT | Internal surrogate key |
-| `booking_reference` | VARCHAR(30) | UNIQUE, NOT NULL | e.g. BK-20250525-001 |
-| `student_id` | VARCHAR(20) | NOT NULL, INDEX | Student matric number |
-| `student_name` | VARCHAR(100) | — | Student name |
-| `room_name` | VARCHAR(50) | NOT NULL | Room identifier e.g. DK-A, Library Room 1 |
-| `slot` | VARCHAR(50) | NOT NULL | Time slot e.g. Monday 9AM-11AM |
-| `booking_date` | DATE | NOT NULL | Date of the booking |
-| `status` | ENUM | NOT NULL | `CONFIRMED` / `CANCELLED` / `COMPLETED` |
-| `purpose` | VARCHAR(300) | — | Reason for booking |
-| `booked_at` | DATETIME | NOT NULL | Booking creation timestamp |
-| `cancelled_at` | DATETIME | — | Cancellation timestamp |
-| — | UNIQUE | `(room_name, slot, booking_date)` | Triggers **SOAP Fault** if duplicated (R8) |
-
-> [!IMPORTANT]
-> This table is managed exclusively via the **SOAP/WSDL** endpoint at `http://localhost:8085/ws/booking`. Attempting to double-book a room triggers a standard **JAX-WS SOAP Fault** response.
-
----
-
-### Table 7: `books` — Library/Booking Service (SOAP)
-
-| Column | Type | Constraint | Description |
-| :--- | :--- | :--- | :--- |
-| `id` | BIGINT | PK, AUTO_INCREMENT | Internal surrogate key |
-| `isbn` | VARCHAR(20) | UNIQUE, NOT NULL | Unique Book ISBN |
-| `title` | VARCHAR(200) | NOT NULL | Title of the book |
-| `author` | VARCHAR(150) | — | Author name |
-| `category` | VARCHAR(100) | — | Book category/genre |
-| `status` | ENUM | NOT NULL, DEFAULT `AVAILABLE` | Availability state: `AVAILABLE` / `BORROWED` |
-| `created_at` | DATETIME | NOT NULL | Record creation timestamp |
-
----
-
-### Table 8: `book_loans` — Library/Booking Service (SOAP)
-
-| Column | Type | Constraint | Description |
-| :--- | :--- | :--- | :--- |
-| `id` | BIGINT | PK, AUTO_INCREMENT | Internal surrogate key |
-| `loan_reference` | VARCHAR(30) | UNIQUE, NOT NULL | e.g. LN-20250525-001 |
-| `student_id` | VARCHAR(20) | NOT NULL, INDEX | Student matric number |
-| `student_name` | VARCHAR(100) | — | Student name |
-| `book_isbn` | VARCHAR(20) | NOT NULL, INDEX | Book ISBN-13 (referenced from catalog) |
-| `book_title` | VARCHAR(200) | — | Book title |
-| `loan_date` | DATE | NOT NULL | Date book was borrowed |
-| `due_date` | DATE | NOT NULL | Return deadline (custom set by Admin) |
-| `return_date` | DATE | — | Actual return date (NULL until returned) |
-| `status` | ENUM | NOT NULL | `BORROWED` / `RETURNED` / `OVERDUE` / `LOST` |
-| `fine_amount` | DECIMAL(8,2) | NOT NULL, DEFAULT 0.00 | Late return fine in RM |
-| `created_at` | DATETIME | NOT NULL | Loan creation timestamp |
-
----
-
-### Table 9: `notifications` — Notification Service (TCP Socket)
-
-| Column | Type | Constraint | Description |
-| :--- | :--- | :--- | :--- |
-| `id` | BIGINT | PK, AUTO_INCREMENT | Internal surrogate key |
-| `type` | ENUM | NOT NULL | Event type (see below) |
-| `recipient_id` | VARCHAR(20) | NOT NULL, INDEX | Student or staff ID |
-| `recipient_name` | VARCHAR(100) | — | Recipient name |
-| `message` | VARCHAR(500) | NOT NULL | Notification message text |
-| `related_entity` | VARCHAR(50) | — | e.g. course code or booking ref |
-| `delivery_status` | ENUM | NOT NULL | `SENT` / `FAILED` / `PENDING` |
-| `channel` | VARCHAR(20) | NOT NULL | Transport channel e.g. `TCP_SOCKET` |
-| `created_at` | DATETIME | NOT NULL, INDEX | Timestamp of notification |
-
-**Available `type` values:**
-
-| Type | Triggered By |
-| :--- | :--- |
-| `ENROLMENT_SUCCESS` | Successful course enrolment |
-| `ENROLMENT_FAILED` | Course full or student not found |
-| `ENROLMENT_DROPPED` | Student drops a course |
-| `ROOM_BOOKED` | SOAP room booking confirmed |
-| `ROOM_CANCELLED` | SOAP room booking cancelled |
-| `BOOK_BORROWED` | SOAP book loan created |
-| `BOOK_RETURNED` | SOAP book returned |
-| `BOOK_OVERDUE` | Scheduled overdue check |
-| `PAYMENT_DUE` | Scheduled payment reminder |
-| `SYSTEM_ALERT` | Generic system events |
-
-> [!NOTE]
-> Every notification is first pushed **asynchronously via a TCP Socket** (R6) to port `9090`, then saved here as a persistent log for audit and the Reporting Service.
-
----
-
-### Entity Relationship Overview
-
-```mermaid
-erDiagram
-    USERS {
-        bigint id PK
-        varchar user_id UK
-        enum role
-        varchar full_name
-        datetime created_at
-    }
-
-    USER_SESSIONS {
-        bigint id PK
-        varchar token UK
-        varchar user_id FK
-        enum role
-        varchar full_name
-        datetime expires_at
-    }
-
-    STUDENTS {
-        bigint id PK
-        varchar student_id UK
-        varchar name
-        varchar email UK
-        varchar programme
-        varchar faculty
-        varchar semester
-        decimal gpa
-        datetime created_at
-    }
-
-    COURSES {
-        bigint id PK
-        varchar course_code UK
-        varchar course_title
-        varchar lecturer
-        int current_capacity
-        int max_capacity
-        varchar semester
-    }
-
-    ENROLMENTS {
-        bigint id PK
-        bigint student_id FK
-        varchar course_code FK
-        enum status
-        datetime enrolled_at
-        datetime dropped_at
-    }
-
-    ROOM_BOOKINGS {
-        bigint id PK
-        varchar booking_reference UK
-        varchar student_id FK
-        varchar room_name
-        varchar slot
-        date booking_date
-        enum status
-    }
-
-    BOOK_LOANS {
-        bigint id PK
-        varchar loan_reference UK
-        varchar student_id FK
-        varchar book_isbn
-        date loan_date
-        date due_date
-        enum status
-        decimal fine_amount
-    }
-
-    NOTIFICATIONS {
-        bigint id PK
-        enum type
-        varchar recipient_id FK
-        varchar message
-        enum delivery_status
-        varchar channel
-        datetime created_at
-    }
-
-    USERS ||--o| STUDENTS : "optionally links to"
-    USERS ||--o{ USER_SESSIONS : "has active"
-    STUDENTS ||--o{ ENROLMENTS : "enrolls in"
-    COURSES   ||--o{ ENROLMENTS : "has"
-    STUDENTS ||--o{ ROOM_BOOKINGS : "books"
-    STUDENTS ||--o{ BOOK_LOANS : "borrows"
-    STUDENTS ||--o{ NOTIFICATIONS : "receives"
-    ENROLMENTS ||--o{ NOTIFICATIONS : "triggers"
-    ROOM_BOOKINGS ||--o{ NOTIFICATIONS : "triggers"
-    BOOK_LOANS    ||--o{ NOTIFICATIONS : "triggers"
-```
-```
+### Port Mappings on Host:
+*   **Web Frontend App**: [http://localhost:3000](http://localhost:3000)
+*   **Student Service / Gateway API**: [http://localhost:8080](http://localhost:8080)
+*   **Enrolment Service**: [http://localhost:8081](http://localhost:8081)
+*   **Booking Service (REST)**: [http://localhost:8082](http://localhost:8082)
+*   **SOAP Endpoint**: [http://localhost:8085/ws/booking?wsdl](http://localhost:8085/ws/booking?wsdl)
+*   **Notification Service (HTTP)**: [http://localhost:8083](http://localhost:8083)
+*   **Notification Service (TCP)**: [tcp://localhost:9090](tcp://localhost:9090)
 
 ---
 
 ## 📁 Project File Structure
 
-Here is the directory tree of the project to help you navigate:
-
 ```text
 SmartCampusConnect/
-├── .env                       # Global environment variables configuration (Ports, passwords)
-├── docker-compose.yml         # Multi-container orchestration (Database, Backend, Web)
-├── backend/                   # ☕ Spring Boot REST API
-│   ├── src/
-│   │   ├── main/
-│   │   │   ├── java/smartcampus/backend/     # Java source code (Controllers, Services, Models)
-│   │   │   └── resources/
-│   │   │       ├── application.properties     # Backend configurations (ports, DB URLs)
-│   │   │       └── ...
-│   ├── pom.xml                # Maven project configuration file (dependencies list)
-│   ├── Dockerfile             # Docker container definition for Backend
-│   └── mvnw / mvnw.cmd        # Maven wrappers for Mac/Linux and Windows (no Maven install needed!)
-├── web/                       # 🌐 Web Client (Vanilla HTML/CSS/JS SPA)
-│   ├── view/
-│   │   └── index.html         # Main entry page of the Web App
-│   ├── css/
-│   │   └── styles.css         # Styling stylesheet (Custom Outfit & Inter typography)
-│   └── js/
-│       ├── app.js             # Core router and application starter
-│       ├── components/        # Dynamic UI components
-│       ├── services/          # API communication layer
-│       ├── utils/             # Helper classes (Session management, etc.)
-│       └── views/             # Screen views (Login, Dashboard, Profile)
-├── mobile/                    # 📱 Mobile Client (Flutter App)
-│   ├── lib/
-│   │   ├── main.dart          # App entry point
-│   │   ├── screens/           # Mobile screens
-│   │   ├── models/            # Data models
-│   │   ├── services/          # HTTP request handlers
-│   │   └── widgets/           # Custom reusable widgets
-│   ├── pubspec.yaml           # Flutter dependencies list
-│   └── ...
-└── desktop/                   # 💻 Desktop Client (Java Swing Application)
-    ├── Main.java              # Entry point for Swing app
-    ├── view/                  # Swing UI Frames (LoginView, etc.)
-    ├── controller/            # Event handling logic
-    ├── model/                 # Local data models
-    └── service/               # API service connectors
+├── .env                       # Global environment ports & database credentials
+├── docker-compose.yml         # 4 Microservices + 4 isolated DBs setup
+├── backend/                   # ☕ Student Service & REST Gateway Gateway
+├── enrolment-service/         # ☕ Enrolment Microservice
+├── booking-service/           # ☕ Booking & SOAP Microservice
+├── notification-service/      # ☕ Notification & TCP Microservice
+├── web/                       # 🌐 Web Client SPA
+├── mobile/                    # 📱 Mobile Client (Flutter)
+└── desktop/                   # 💻 Desktop Client (Java Swing)
 ```
 
----
-
-## 🛠️ Step 0: Prerequisites (For Absolute Beginners)
-
-If you have never built or run a software system before, don't worry! You will need to install the following tools on your computer. Follow the links below according to your Operating System (Windows or MacOS).
-
-### 1. Git (Version Control)
-*Used to clone and manage the code.*
-*   **How to Download:**
-    *   **Windows**: Download and install [Git for Windows](https://git-scm.com/download/win).
-    *   **MacOS**: Open terminal and type `git --version`. If it is not installed, it will prompt you to install Xcode Command Line Tools. Alternatively, download from [Git for Mac](https://git-scm.com/download/mac).
-*   **Verification**: Open your Command Prompt / Terminal and type:
-    ```bash
-    git --version
-    ```
-
-### 2. Docker Desktop (Recommended - The Easiest Way to Run Everything)
-*Allows you to run the database, backend, and web client instantly without manually setting up Java or MySQL.*
-*   **How to Download:** Go to the [Docker Desktop Official Website](https://www.docker.com/products/docker-desktop/) and download the installer for your OS.
-*   **Setup**: Run the installer and launch the Docker Desktop application. Keep it running in the background.
-
-### 3. Java Development Kit (JDK 17)
-*Required if you want to run the Backend or Desktop Swing app manually without Docker.*
-*   **How to Download:** Download **JDK 17 (LTS)** from [Adoptium Eclipse Temurin](https://adoptium.net/temurin/releases/?version=17).
-*   **Verification**: Run the following command in your terminal:
-    ```bash
-    java -version
-    ```
-    *(It should show version `17.x.x`)*
-
-### 4. Flutter SDK (For Mobile App)
-*Required to run the mobile app.*
-*   **How to Download:**
-    1. Go to the [Flutter Official Installation Guide](https://docs.flutter.dev/get-started/install) and choose your OS.
-    2. Extract the downloaded zip file and add the `flutter/bin` folder to your computer's **PATH** environment variable (follow the step-by-step instructions on the Flutter website).
-*   **Verification**: Run:
-    ```bash
-    flutter doctor
-    ```
-    *(This command checks your environment and displays a report of what is missing, e.g. Android toolchains).*
-
-### 5. Recommended IDEs (Code Editors)
-To view and run the code, download:
-*   **Backend & Desktop**: [IntelliJ IDEA Community Edition](https://www.jetbrains.com/idea/download/) (Free) or [VS Code](https://code.visualstudio.com/).
-*   **Mobile (Flutter)**: [Android Studio](https://developer.android.com/studio) or [VS Code](https://code.visualstudio.com/) with the *Flutter* and *Dart* extensions installed.
-
----
-
-## ⚡ Option A: Running with Docker (Highly Recommended & Easiest)
-
-Docker lets you spin up the **MySQL database**, **Spring Boot Backend**, and **Nginx Web Server** with a single command! You do **not** need to install MySQL or Java on your computer for this option.
-
-> [!TIP]
-> Make sure **Docker Desktop** is open and running in the background before running the command below!
-
-### Step 1: Open Terminal and Clone Project
-Open your Command Prompt (Windows) or Terminal (Mac) and navigate to where you want to keep the project (e.g., `cd Documents`). Clone the repository:
-```bash
-git clone <repository_url>
-cd SmartCampusConnect
-```
-
-### Step 2: Ensure Environment Variables are Ready
-Locate the `.env` file in the root directory. It contains the default ports and database credentials:
-```env
-FORWARD_DB_PORT=3306
-DB_DATABASE=smartcampus
-DB_USERNAME=root
-DB_PASSWORD=            # Keep blank for default empty password
-FORWARD_API_PORT=8080
-FORWARD_WEB_PORT=3000
-```
-*(Normally, you don't need to change anything here to get started!)*
-
-### Step 3: Startup Docker Containers
-In your terminal in the root folder, execute:
-```bash
-docker-compose up --build
-```
-*Wait a few minutes while Docker downloads the required images (MySQL, Java JDK, Nginx) and builds the application.*
-
-### Step 4: Check if Everything is Running
-Open your web browser and visit:
-*   **Web Frontend App**: [http://localhost:3000](http://localhost:3000)
-*   **Backend REST API**: [http://localhost:8080/api/students](http://localhost:8080/api/students)
-*   **Backend SOAP WSDL**: [http://localhost:8085/ws/booking?wsdl](http://localhost:8085/ws/booking?wsdl)
-*   **Notification TCP Server**: Listening internally on port `9090` (check Docker logs: `docker logs smartcampus-backend`)
-*   **MySQL Database**: Running on port `3306` inside Docker.
-
-*To stop the system, press `Ctrl + C` in the terminal or run `docker-compose down`.*
-
----
-
-## 🛠️ Option B: Running Manually (Without Docker)
-
-Use this if you prefer running and debugging individual components locally on your machine.
-
-### Part 1: Local MySQL Database Setup
-1. Download and install a local MySQL Server (we recommend [XAMPP](https://www.apachefriends.org/) which includes MySQL, or download the [MySQL Installer](https://dev.mysql.com/downloads/installer/)).
-2. Start the MySQL service.
-3. Open any database tool (like *phpMyAdmin* from XAMPP, *DBeaver*, or *MySQL Workbench*) and run this query to create the database:
-   ```sql
-   CREATE DATABASE smartcampus;
-   ```
-4. Verify the database details inside `backend/src/main/resources/application.properties` match your local setup:
-   ```properties
-   spring.datasource.url=jdbc:mysql://localhost:3306/smartcampus?createDatabaseIfNotExist=true
-   spring.datasource.username=root
-   spring.datasource.password=  # Put your MySQL password here if you have one
-   ```
-
-### Part 2: Starting the Spring Boot Backend
-1. Open your Terminal / Command Prompt and go to the `backend` folder:
-   ```bash
-   cd backend
-   ```
-2. Run the backend server using the included Maven wrapper script:
-   *   **Windows**:
-       ```cmd
-       mvnw.cmd spring-boot:run
-       ```
-   *   **Mac / Linux**:
-       ```bash
-       chmod +x mvnw  # Give execution permissions (First time only)
-       ./mvnw spring-boot:run
-       ```
-3. The backend will start and listen on port `8080`. You should see `Started BackendApplication` in the terminal logs!
-
-### Part 3: Running the Web Client
-Since the web application uses ES6 Javascript Modules (`type="module"`), **you cannot open `index.html` by double-clicking it directly** (browsers will block it for security reasons). You must run it on a local web server:
-
-*   **Method 1: VS Code (Easiest)**:
-    1. Open the project in **VS Code**.
-    2. Install the **Live Server** extension (by Ritwick Dey).
-    3. Right-click on `web/view/index.html` and click **"Open with Live Server"**.
-*   **Method 2: Python (Quick terminal way)**:
-    1. Open terminal in the `web` folder:
-       ```bash
-       cd web
-       ```
-    2. Run a simple HTTP server:
-       *   On Windows:
-           ```bash
-           python -m http.server 3000
-           ```
-       *   On Mac/Linux:
-           ```bash
-           python3 -m http.server 3000
-           ```
-    3. Open your browser and visit: [http://localhost:3000/view/index.html](http://localhost:3000/view/index.html)
-
-### Part 4: Running the Desktop Client (Java Swing)
-The Desktop Client resides in the `desktop` folder.
-*   **Method 1: Using IntelliJ IDEA (Easiest)**:
-    1. Open IntelliJ IDEA.
-    2. Select **Open** and choose the `desktop` folder.
-    3. Make sure the Project SDK is set to JDK 17 (File > Project Structure > Project > SDK).
-    4. Navigate to `Main.java`, right-click and choose **Run 'Main.main()'**.
-*   **Method 2: Using Terminal**:
-    1. Navigate to the `desktop` directory:
-       ```bash
-       cd desktop
-       ```
-    2. Compile all files:
-       ```bash
-       javac Main.java view/*.java controller/*.java model/*.java service/*.java util/*.java
-       ```
-    3. Run the application:
-       ```bash
-       java Main
-       ```
-
-### Part 5: Running the Mobile Client (Flutter)
-1. Open a terminal inside the `mobile` folder:
-   ```bash
-   cd mobile
-   ```
-2. Fetch all Flutter package dependencies:
-   ```bash
-   flutter pub get
-   ```
-3. Ensure your device or emulator is connected:
-   ```bash
-   flutter devices
-   ```
-4. Run the app:
-   ```bash
-   flutter run
-   ```
-
----
-
-## 🔍 Troubleshooting FAQ
-
-> [!WARNING]
-> **Terminal says `mvnw: command not found` or `Access Denied` on Mac/Linux?**
-> On MacOS/Linux, you must give execution permissions to the maven wrapper. Run `chmod +x mvnw` in the terminal first before executing `./mvnw spring-boot:run`.
-
-> [!IMPORTANT]
-> **Error saying `Port 8080 already in use`?**
-> Another app (like another local server, Skype, or Oracle database) is running on port 8080.
-> *   **Fix 1**: Change `FORWARD_API_PORT` in your `.env` file to another port (e.g. `8081`).
-> *   **Fix 2**: Close the program occupying port 8080.
-
-> [!IMPORTANT]
-> **Cannot access SOAP WSDL at `http://localhost:8085/ws/booking?wsdl`?**
-> The JAX-WS SOAP endpoint runs inside the Spring Boot process on a **separate port (`8085`)**. Ensure this port is not blocked by your firewall and is correctly exposed in `docker-compose.yml`. If running manually, the port opens automatically when the Spring Boot app starts.
-
-> [!CAUTION]
-> **Web App shows a blank screen or errors related to CORS?**
-> Make sure you are serving the web client via a local web server (Nginx via Docker, Live Server, or Python Server) and **not** just opening the HTML file directly in the browser address bar.
-
-> [!NOTE]
-> **Flutter is unable to find Android SDK?**
-> Run `flutter doctor` in your terminal. It will guide you exactly what needs to be configured in your Android Studio installation to link the paths.
-
----
-
-## 👨‍💻 Development Team
-Created by the **OMGosh Development Team** for the *Distributed Application Development* course. 
+For legacy manual running instructions, consult the individual subdirectories.
