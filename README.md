@@ -1,29 +1,195 @@
 # 🎓 Smart Campus Connect (Microservices Architecture)
 
-SmartCampus Connect ialah sistem pengurusan kampus teragih berasaskan **Seni Bina Microservices (SOA)**. Monolit asal telah dipecahkan kepada **4 microservice berasingan** dengan pangkalan data tersendiri (*Database-per-Service*), menyokong komunikasi REST + SOAP, serta diintegrasikan dengan aplikasi **Web**, **Mobile (Flutter)**, dan **Desktop (Java Swing)**.
+SmartCampus Connect is a distributed, multi-platform campus management system. It is designed using a **Microservices / Service-Oriented Architecture (SOA)** featuring database isolation per service, inter-service API orchestration/composition, multithreading protections, and multi-protocol clients (REST + SOAP).
+
+The system integrates three clients (**Web**, **Mobile**, and **Desktop**) communicating with a Spring Boot REST API Gateway and a set of dedicated MySQL databases.
 
 ---
 
-## 🏗️ Rajah Seni Bina Sistem (System Architecture)
+## 🏗️ System Architecture
 
-![System Architecture](architecture_diagram.png)
+This Mermaid diagram illustrates the microservice layers, ports, and inter-service HTTP WebClient communication:
+
+```mermaid
+graph TD
+    %% Styling Definitions
+    classDef client fill:#eef,stroke:#33b,stroke-width:2px;
+    classDef gateway fill:#fee,stroke:#b33,stroke-width:2px;
+    classDef service fill:#efe,stroke:#3b3,stroke-width:2px;
+    classDef db fill:#ffd,stroke:#bb3,stroke-width:2px;
+
+    %% Client Layer
+    subgraph Clients ["Client Applications"]
+        Web["🌐 Web Client<br>(Vanilla JS SPA on :3000)"]:::client
+        Mobile["📱 Mobile Client<br>(Flutter App)"]:::client
+        Desktop["💻 Desktop Client<br>(Java Swing App)"]:::client
+    end
+
+    %% Gateway / Entrypoint Layer
+    subgraph GatewayLayer ["Gateway & Routing"]
+        Gateway["☕ Student Service / REST Gateway<br>(Spring Boot on :8080)"]:::gateway
+    end
+
+    %% Microservices Layer
+    subgraph Services ["Backend Microservices"]
+        Enrolment["☕ Enrolment Service<br>(Spring Boot on :8081)"]:::service
+        Booking["☕ Booking Service<br>(Spring Boot on :8082 / SOAP :8085)"]:::service
+        Notification["☕ Notification Service<br>(Spring Boot on :8083 / TCP :9090)"]:::service
+    end
+
+    %% Database Layer
+    subgraph Databases ["Isolated MySQL Databases"]
+        DB_Student[("🗄️ db_student")]:::db
+        DB_Enrolment[("🗄️ db_enrolment")]:::db
+        DB_Booking[("🗄️ db_booking")]:::db
+        DB_Notification[("🗄️ db_notification")]:::db
+    end
+
+    %% Communication Flow
+    Web -->|REST| Gateway
+    Mobile -->|REST| Gateway
+    Desktop -->|REST| Gateway
+
+    Mobile -.->|SOAP| Booking
+    Desktop -.->|SOAP| Booking
+
+    Gateway -->|JPA| DB_Student
+    Enrolment -->|JPA| DB_Enrolment
+    Booking -->|JPA| DB_Booking
+    Notification -->|JPA| DB_Notification
+
+    Gateway ==>|HTTP WebClient| Enrolment
+    Gateway ==>|HTTP WebClient| Booking
+    Gateway ==>|HTTP WebClient| Notification
+
+    Enrolment -.->|HTTP WebClient| Gateway
+    Enrolment -.->|HTTP WebClient| Notification
+    Booking -.->|HTTP WebClient| Notification
+```
 
 ---
 
-## 📋 Keperluan Kursus & Pematuhan Matriks (R1 - R10)
+## 🗄️ Database Relationships (ER Diagram)
 
-| ID Keperluan | Perincian Teknikal & Implementasi |
-| :--- | :--- |
-| **R1: System Characterisation** | • Menyokong ketelusan lokasi & akses melalui API Gateway / Proxy.<br>• Sistem terus berfungsi (graceful degradation) menggunakan HTTP WebClient fallback jika salah satu servis terputus. |
-| **R2: Architectural Pattern** | • Pembahagian jelas antara lapisan Presentation (Web, Mobile, Desktop), Business Logic (Microservices), dan Persistence (MySQL). |
-| **R3: SOA Principles** | • Strict decoupling kepada 4 servis utama: Student, Enrolment, Booking, dan Notification.<br>• Pangkalan data terasing bagi setiap servis (`db_student`, `db_enrolment`, `db_booking`, `db_notification`). |
-| **R4: Service Composition** | • **Student Service (Gateway)** menggabungkan (aggregate) data profil, subjek, tempahan, dan notifikasi dari semua microservices ke personal dashboard.<br>• Servis lain berinteraksi secara dinamik melalui HTTP REST calls. |
-| **R5: Multithreaded Server** | • `enrolment-service` menggunakan **`ReentrantLock` (fairness-mode)** untuk mengawal baki tempat bagi pendaftaran subjek secara selamat semasa demo concurrency (10 threads serentak). |
-| **R6: Distributed Messaging** | • Sistem alert sokongan **TCP Socket** (port `9090`) dipasang di `notification-service` beroperasi secara asynchronous (Producer-Consumer pattern). |
-| **R7: REST API** | • Pendedahan API RESTful seragam di port `8080` (Gateway). Menyokong HTTP verbs (`GET`, `POST`, `PUT`, `DELETE`). |
-| **R8: SOAP Service** | • SOAP legacy Web Service dikekalkan di port `8085` (`booking-service`) menggunakan JAX-WS untuk carian katalog, pinjaman buku, dan tempahan bilik. |
-| **R9: Failure Handling** | • Isolasi kegagalan di mana dashboard pelajar masih boleh dibuka dengan selamat walaupun `booking-service` atau `enrolment-service` terhenti. |
-| **R10: Version Control & Build** | • Automasi penuh menggunakan Docker Compose. Sistem database dan server sedia dijalankan dalam masa kurang 5 minit. |
+Each microservice manages its own isolated MySQL database. Relationships are resolved logically via code/API calls rather than physical foreign key constraints.
+
+```mermaid
+erDiagram
+    %% db_student Schema
+    USERS {
+        bigint id PK
+        varchar user_id UK "Matric / ID"
+        enum role "STUDENT / ADMIN"
+        varchar full_name
+        datetime created_at
+    }
+    USER_SESSIONS {
+        bigint id PK
+        varchar token UK "UUID Token"
+        varchar user_id "Logical FK to USERS"
+        enum role
+        varchar full_name
+        datetime expires_at
+    }
+    STUDENTS {
+        bigint id PK
+        varchar student_id UK "Matric no"
+        varchar name
+        varchar email UK
+        varchar programme
+        varchar faculty
+        varchar semester
+        decimal gpa
+        datetime created_at
+    }
+
+    %% db_enrolment Schema
+    COURSES {
+        bigint id PK
+        varchar course_code UK
+        varchar course_title
+        varchar lecturer
+        varchar faculty
+        int credit_hours
+        int current_capacity
+        int max_capacity
+    }
+    ENROLMENTS {
+        bigint id PK
+        bigint student_id "Logical FK to STUDENTS"
+        varchar course_code "Logical FK to COURSES"
+        varchar student_name
+        varchar course_title
+        enum status "ACTIVE / DROPPED / COMPLETED"
+    }
+
+    %% db_booking Schema
+    BOOKS {
+        bigint id PK
+        varchar isbn UK
+        varchar title
+        varchar author
+        varchar category
+        enum status "AVAILABLE / BORROWED"
+    }
+    BOOK_LOANS {
+        bigint id PK
+        varchar loan_reference UK
+        varchar student_id "Matric no"
+        varchar student_name
+        varchar book_isbn
+        date loan_date
+        date due_date
+        date return_date
+        enum status "BORROWED / RETURNED / OVERDUE"
+        decimal fine_amount
+    }
+    ROOM_BOOKINGS {
+        bigint id PK
+        varchar booking_reference UK
+        varchar student_id "Matric no"
+        varchar room_name
+        varchar slot
+        date booking_date
+        enum status "CONFIRMED / CANCELLED"
+    }
+
+    %% db_notification Schema
+    NOTIFICATIONS {
+        bigint id PK
+        varchar type
+        varchar recipient_id "Matric / ID"
+        varchar recipient_name
+        varchar message
+        varchar delivery_status "SENT / FAILED"
+        varchar channel "HTTP / TCP_SOCKET"
+    }
+
+    %% Logical Relationships
+    USERS ||--o{ USER_SESSIONS : "generates"
+    STUDENTS ||--o{ ENROLMENTS : "enrolls (logical)"
+    COURSES ||--o{ ENROLMENTS : "contains (logical)"
+    STUDENTS ||--o{ ROOM_BOOKINGS : "books (logical)"
+    STUDENTS ||--o{ BOOK_LOANS : "borrows (logical)"
+    STUDENTS ||--o{ NOTIFICATIONS : "receives (logical)"
+```
+
+---
+
+## 🎓 Coursework Compliance Matrix (R1 - R10)
+
+| Requirement | Concept (Week) | Implementation Details & Mapping |
+| :--- | :--- | :--- |
+| **R1: System Characterisation** | Week 1 | • Decoupled Microservices with location/access transparency via Gateway Proxies.<br>• Graceful degradation using WebClient fallback logic if a service becomes unavailable. |
+| **R2: Architectural Pattern** | Week 2 | • **Multi-tier Microservices**: Separates Presentation layer, business processes, and database persistence. |
+| **R3: SOA Principles** | Week 3 | • Services separated into: Student, Enrolment, Booking, and Notification.<br>• **Database-per-Service**: Decoupled databases (`db_student`, `db_enrolment`, `db_booking`, `db_notification`). |
+| **R4: Service Composition** | Week 3 | • Student Service (Dashboard) orchestrates REST aggregation across enrolment, booking, and notification services via WebClient.<br>• Internal notifications sent using decoupled HTTP post requests. |
+| **R5: Multithreaded Server** | Week 4 | • enrolment-service utilizes a fairness-mode `ReentrantLock` to protect course capacity concurrency states during registration load tests. |
+| **R6: Distributed Messaging** | Week 5 | • Implements a custom non-blocking notification server listening on TCP Socket port `9090` (Producer-Consumer pattern). |
+| **R7: REST API** | Week 6 | • REST APIs exposed via API Gateway controllers at port `8080` (handles proxy routing to `/api/enrol`, `/api/courses`, and `/api/notifications`). |
+| **R8: SOAP Service** | Week 7 | • SOAP/WSDL endpoints exposed in `booking-service` at port `8085` using JAX-WS. |
+| **R9: Failure Handling** | Weeks 1, 4 | • Isolated microservices prevent cascade failures; failing to query one service fallbacks to empty list data without crashing the dashboard. |
+| **R10: Version Control & Build** | Engineering Practice | • Decoupled build containers configured in `docker-compose.yml` allowing single-command startup. |
 
 ---
 
@@ -31,259 +197,243 @@ SmartCampus Connect ialah sistem pengurusan kampus teragih berasaskan **Seni Bin
 
 ### 1. REST API Endpoints (Gateway Port 8080)
 
-Semua request dari aplikasi dialihkan melalui Gateway (`student-service`) pada port **8080** secara lut sinar (transparent).
+All HTTP REST endpoints listed below are routed via the Gateway (`student-service` on port `8080`) to ensure backend location transparency.
 
-| Servis / Kategori | Method | Endpoint / URL | Request Payload (JSON) | Deskripsi |
+| Category | Method | Endpoint / URL | Request Payload (JSON) | Description |
 | :--- | :---: | :--- | :--- | :--- |
-| **🔐 Authentication** | `POST` | `/api/auth/login` | `{ "userId": "B032310001" }` | Log masuk menggunakan no. matrik / ADMIN. Mengembalikan token UUID. |
-| | `GET` | `/api/auth/me` | *Tiada* | Memeriksa sesi aktif berdasarkan header `X-Auth-Token`. |
-| | `POST` | `/api/auth/logout` | *Tiada* | Memadam sesi aktif dan mematikan token di database. |
-| **👤 Student Profile** | `GET` | `/api/students` | *Tiada* | Mendapatkan senarai semua profil pelajar. |
-| | `GET` | `/api/students/{matricNo}` | *Tiada* | Carian profil pelajar berdasarkan nombor matrik. |
-| | `GET` | `/api/students/id/{id}` | *Tiada* | Carian profil pelajar menggunakan ID database (kegunaan dalaman). |
-| | `POST` | `/api/students` | `{ "name": "Amin", "email": "amin@...", "programme": "...", "faculty": "FTMK", "semester": "1", "gpa": 3.6, "phoneNumber": "..." }` | Mendaftar profil pelajar baharu dan auto-jana akaun log masuk. |
-| | `PUT` | `/api/students/{id}` | `{ "name": "Amin Baru", "gpa": 3.7 }` | Mengemas kini data profil pelajar berdasarkan ID database. |
-| | `DELETE` | `/api/students/{id}` | *Tiada* | Memadam akaun pelajar dan membatalkan sesi login mereka. |
-| **📝 Course Enrolment**| `GET` | `/api/courses` | *Tiada* | Mendapatkan senarai semua subjek yang ditawarkan. |
-| | `POST` | `/api/courses` | `{ "courseCode": "BITP3123", "courseTitle": "Distributed Apps", "lecturer": "Dr. R", "faculty": "FTMK", "creditHours": 3, "maxCapacity": 30, "semester": "2024/2025 SEM 1" }` | Menambah penawaran subjek baru. |
-| | `POST` | `/api/enrol` | `{ "studentId": 1, "courseCode": "BITP3123" }` | Mendaftarkan pelajar ke dalam subjek. Protected by `ReentrantLock`. |
-| | `DELETE` | `/api/enrol/{studentId}/{courseCode}`| *Tiada* | Menggugurkan (drop) subjek yang didaftarkan. |
-| | `GET` | `/api/enrol/student/{studentId}`| *Tiada* | Mendapatkan senarai pendaftaran subjek bagi pelajar. |
-| | `POST` | `/api/enrol/load-test/{courseCode}`| *Tiada* | Melancarkan load test (10 thread serentak berebut 3 tempat duduk). |
-| **🔔 Notifications** | `GET` | `/api/notifications` | *Tiada* | Mendapatkan keseluruhan log notifikasi sistem. |
-| | `GET` | `/api/notifications/recipient/{id}`| *Tiada* | Mendapatkan log notifikasi khusus untuk pelajar (matrik). |
+| **🔐 Auth** | `POST` | `/api/auth/login` | `{ "userId": "B032310001" }` | Logs in a user by ID only (matric number or `ADMIN`). |
+| | `GET` | `/api/auth/me` | *None* | Retrieves active session context (requires `X-Auth-Token` header). |
+| | `POST` | `/api/auth/logout` | *None* | Invalidates and destroys the active session. |
+| **👤 Student** | `GET` | `/api/students` | *None* | Lists all student profiles in the database. |
+| | `GET` | `/api/students/{matricNo}` | *None* | Retrieves student profile by matriculation number. |
+| | `GET` | `/api/students/id/{id}` | *None* | Retrieves student profile by database ID. |
+| | `POST` | `/api/students` | `{ "name": "Amin", "email": "amin@...", "programme": "...", "faculty": "FTMK", "semester": "1", "gpa": 3.60, "phoneNumber": "..." }` | Registers a new student and generates login credentials. |
+| | `PUT` | `/api/students/{id}` | `{ "name": "Amin New", "gpa": 3.70 }` | Updates profile info by database ID. |
+| | `DELETE` | `/api/students/{id}` | *None* | Deletes student profile and login credentials. |
+| **📝 Enrolment**| `GET` | `/api/courses` | *None* | Returns a list of all courses. |
+| | `POST` | `/api/courses` | `{ "courseCode": "BITP3123", "courseTitle": "Distributed Apps", "lecturer": "Dr. R", "faculty": "FTMK", "creditHours": 3, "maxCapacity": 30, "semester": "2024/2025 SEM 1" }` | Creates a new course offering. |
+| | `POST` | `/api/enrol` | `{ "studentId": 1, "courseCode": "BITP3123" }` | Enrolls a student into a course. Protected by `ReentrantLock`. |
+| | `DELETE` | `/api/enrol/{studentId}/{courseCode}`| *None* | Drops a course registration. |
+| | `GET` | `/api/enrol/student/{studentId}`| *None* | Gets all course registrations for a student. |
+| | `POST` | `/api/enrol/load-test/{courseCode}`| *None* | Triggers load test (10 concurrent threads booking remaining 3 seats). |
+| **🔔 Alerts** | `GET` | `/api/notifications` | *None* | Lists all logged system alerts. |
+| | `GET` | `/api/notifications/recipient/{id}`| *None* | Retrieves logs for a specific recipient (matric number). |
 
 ### 2. SOAP Web Services (Port 8085)
 
-SOAP service diterbitkan secara terus oleh `booking-service` pada URL: `http://localhost:8085/ws/booking`.
+The SOAP service is published directly by `booking-service` at: `http://localhost:8085/ws/booking`.
 
-| Nama Operasi | Input Parameter | Output / Return | Deskripsi |
+| Operation Name | Input Parameters | Output / Return | Description |
 | :--- | :--- | :--- | :--- |
-| `bookRoom` | `studentId`, `studentName`, `roomName`, `slot`, `date`, `purpose` | `String` (Booking Ref) | Tempah bilik kuliah. Mengeluarkan SOAP Fault jika slot bertindih. |
-| `checkAvailability`| `roomName`, `slot`, `date` | `boolean` (true/false) | Semak sama ada bilik tersebut kosong atau tidak pada tarikh berkenaan. |
-| `cancelBooking` | `bookingRef` | `boolean` (true) | Membatalkan tempahan bilik. |
-| `borrowBook` | `token`, `studentId`, `studentName`, `isbn`, `dueDate` | `String` (Loan Ref) | Admin pinjamkan buku kepada pelajar. |
-| `returnBook` | `token`, `loanRef` | `boolean` (true) | Rekod pemulangan buku dan hitung denda lewat jika ada. |
-| `addBook` | `token`, `isbn`, `title`, `author`, `category` | `boolean` (true) | Admin mendaftarkan buku baru ke dalam katalog. |
-| `searchBooks` | `query` | `List<Book>` | Cari senarai buku mengikut tajuk, kategori, atau pengarang. |
+| `bookRoom` | `studentId`, `studentName`, `roomName`, `slot`, `date`, `purpose` | `String` (Booking Ref) | Confirms a room booking. SOAP Fault if slot is already booked. |
+| `checkAvailability`| `roomName`, `slot`, `date` | `boolean` | Checks if a room slot is available. |
+| `cancelBooking` | `bookingRef` | `boolean` | Cancels a room booking. |
+| `borrowBook` | `token`, `studentId`, `studentName`, `isbn`, `dueDate` | `String` (Loan Ref) | Admin lends a book. |
+| `returnBook` | `token`, `loanRef` | `boolean` | Admin records a book return (calculates fine). |
+| `addBook` | `token`, `isbn`, `title`, `author`, `category` | `boolean` | Admin adds a book. |
+| `searchBooks` | `query` | `List<Book>` | Searches book catalog. |
 
 ---
 
-## 🗄️ Kamus Data (Data Dictionary)
-
-Berikut ialah struktur jadual bagi setiap database microservice yang digunakan.
+## 🗄️ Data Dictionary
 
 ### 1. Database: `db_student` (student-service)
 
-#### Table: `users` (Akaun Pengguna)
-| Kolum | Jenis Data | Kekangan (Constraint) | Deskripsi |
+#### Table: `users`
+| Column | Type | Constraint | Description |
 | :--- | :--- | :--- | :--- |
-| `id` | BIGINT | PK, Auto-Increment | ID dalaman sistem. |
-| `user_id` | VARCHAR(20) | Unique, Indexed | No. matrik atau `ADMIN` (digunakan semasa login). |
-| `role` | ENUM | `STUDENT` / `ADMIN` | Tahap akses pengguna. |
-| `full_name` | VARCHAR(100) | — | Nama penuh pengguna. |
-| `created_at` | DATETIME | — | Tarikh akaun didaftarkan. |
+| `id` | BIGINT | PK, Auto-Increment | Internal surrogate identifier. |
+| `user_id` | VARCHAR(20) | Unique, Indexed | Student matric number or `ADMIN`. |
+| `role` | ENUM | `STUDENT` / `ADMIN` | User access level. |
+| `full_name` | VARCHAR(100) | — | Display name of the user. |
+| `created_at` | DATETIME | — | Record creation timestamp. |
 
-#### Table: `user_sessions` (Sesi Login Aktif)
-| Kolum | Jenis Data | Kekangan (Constraint) | Deskripsi |
+#### Table: `user_sessions`
+| Column | Type | Constraint | Description |
 | :--- | :--- | :--- | :--- |
-| `id` | BIGINT | PK, Auto-Increment | ID sesi. |
-| `token` | VARCHAR(100) | Unique, Indexed | Token UUID sesi aktif. |
-| `user_id` | VARCHAR(20) | Indexed | ID pengguna pemilik sesi. |
-| `role` | ENUM | `STUDENT` / `ADMIN` | Role bagi sesi semasa. |
-| `full_name` | VARCHAR(100) | — | Nama penuh pemilik sesi. |
-| `expires_at` | DATETIME | — | Tarikh tamat sesi (laluan: 24 jam). |
+| `id` | BIGINT | PK, Auto-Increment | Session primary identifier. |
+| `token` | VARCHAR(100) | Unique, Indexed | Session UUID token. |
+| `user_id` | VARCHAR(20) | Indexed | Target user ID. |
+| `role` | ENUM | `STUDENT` / `ADMIN` | Session role. |
+| `full_name` | VARCHAR(100) | — | Display name of session owner. |
+| `expires_at` | DATETIME | — | Expiration timestamp (default 24 hours). |
 
-#### Table: `students` (Profil Akademik)
-| Kolum | Jenis Data | Kekangan (Constraint) | Deskripsi |
+#### Table: `students`
+| Column | Type | Constraint | Description |
 | :--- | :--- | :--- | :--- |
-| `id` | BIGINT | PK, Auto-Increment | ID profil pelajar. |
-| `student_id`| VARCHAR(20) | Unique | No. matrik pelajar (cth: `B032310001`). |
-| `name` | VARCHAR(100) | — | Nama penuh pelajar. |
-| `email` | VARCHAR(150) | Unique | Email rasmi UTeM. |
-| `programme` | VARCHAR(100) | — | Kursus pengajian (cth: Bachelor of Computer Science). |
-| `faculty` | VARCHAR(50) | — | Fakulti pelajar (cth: FTMK). |
-| `semester` | VARCHAR(10) | — | Semester semasa. |
-| `gpa` | DECIMAL(4,2) | — | Nilai purata terkumpul (GPA). |
-| `phone_number`| VARCHAR(15) | — | Nombor telefon. |
+| `id` | BIGINT | PK, Auto-Increment | Student record primary key. |
+| `student_id`| VARCHAR(20) | Unique | Matric number (e.g. `B032310001`). |
+| `name` | VARCHAR(100) | — | Full name. |
+| `email` | VARCHAR(150) | Unique | Student email. |
+| `programme` | VARCHAR(100) | — | Major field of study. |
+| `faculty` | VARCHAR(50) | — | Faculty identifier (e.g. `FTMK`). |
+| `semester` | VARCHAR(10) | — | Current semester. |
+| `gpa` | DECIMAL(4,2) | — | Cumulative GPA. |
+| `phone_number`| VARCHAR(15) | — | Contact number. |
 
 ---
 
 ### 2. Database: `db_enrolment` (enrolment-service)
 
-#### Table: `courses` (Maklumat Subjek)
-| Kolum | Jenis Data | Kekangan (Constraint) | Deskripsi |
+#### Table: `courses`
+| Column | Type | Constraint | Description |
 | :--- | :--- | :--- | :--- |
-| `id` | BIGINT | PK, Auto-Increment | ID subjek. |
-| `course_code`| VARCHAR(20) | Unique | Kod subjek (cth: `BITP3123`). |
-| `course_title`| VARCHAR(150) | — | Nama subjek penuh. |
-| `lecturer` | VARCHAR(100) | — | Nama pensyarah. |
-| `faculty` | VARCHAR(50) | — | Fakulti yang menawarkan subjek. |
-| `credit_hours`| INT | Default 3 | Nilai kredit subjek. |
-| `current_capacity`| INT | Default 0 | Bilangan pelajar semasa yang telah berdaftar. |
-| `max_capacity`| INT | Default 30 | Had kapasiti kelas maksimum. |
+| `id` | BIGINT | PK, Auto-Increment | Course identifier. |
+| `course_code`| VARCHAR(20) | Unique | Course code (e.g. `BITP3123`). |
+| `course_title`| VARCHAR(150)| — | Course name. |
+| `lecturer` | VARCHAR(100) | — | Lecturer name. |
+| `faculty` | VARCHAR(50) | — | Hosting faculty. |
+| `credit_hours`| INT | Default 3 | Credit weight. |
+| `current_capacity`| INT | Default 0 | Current enrolled seats. |
+| `max_capacity`| INT | Default 30 | Maximum capacity limit. |
 
-#### Table: `enrolments` (Transaksi Pendaftaran Subjek)
-| Kolum | Jenis Data | Kekangan (Constraint) | Deskripsi |
+#### Table: `enrolments`
+| Column | Type | Constraint | Description |
 | :--- | :--- | :--- | :--- |
-| `id` | BIGINT | PK, Auto-Increment | ID transaksi pendaftaran. |
-| `student_id`| BIGINT | Composite Unique (dengan course_code) | Logical Key merujuk kepada ID pelajar dari `db_student`. |
-| `course_code`| VARCHAR(20) | Composite Unique (dengan student_id) | Kod subjek yang didaftarkan. |
-| `student_name`| VARCHAR(100) | — | Nama pelajar (denormalized untuk kelajuan akses). |
-| `course_title`| VARCHAR(150) | — | Nama subjek (denormalized). |
-| `status` | ENUM | `ACTIVE` / `DROPPED` / `COMPLETED` | Status pendaftaran subjek. |
+| `id` | BIGINT | PK, Auto-Increment | Enrolment identifier. |
+| `student_id`| BIGINT | Composite Unique (with course_code) | Logical reference to Student ID on `db_student`. |
+| `course_code`| VARCHAR(20) | Composite Unique (with student_id) | Target course code. |
+| `student_name`| VARCHAR(100)| — | Denormalized student name. |
+| `course_title`| VARCHAR(150)| — | Denormalized course title. |
+| `status` | ENUM | `ACTIVE` / `DROPPED` / `COMPLETED` | Registration status. |
 
 ---
 
 ### 3. Database: `db_booking` (booking-service)
 
-#### Table: `books` (Katalog Buku)
-| Kolum | Jenis Data | Kekangan (Constraint) | Deskripsi |
+#### Table: `books`
+| Column | Type | Constraint | Description |
 | :--- | :--- | :--- | :--- |
-| `id` | BIGINT | PK, Auto-Increment | ID buku. |
-| `isbn` | VARCHAR(20) | Unique | Nombor ISBN-13 unik buku. |
-| `title` | VARCHAR(200) | — | Tajuk buku. |
-| `author` | VARCHAR(150) | — | Pengarang buku. |
-| `category` | VARCHAR(100) | — | Kategori / genre. |
-| `status` | ENUM | `AVAILABLE` / `BORROWED` | Status ketersediaan buku. |
+| `id` | BIGINT | PK, Auto-Increment | Book ID. |
+| `isbn` | VARCHAR(20) | Unique | Book ISBN-13 code. |
+| `title` | VARCHAR(200) | — | Book title. |
+| `author` | VARCHAR(150) | — | Author name. |
+| `category` | VARCHAR(100) | — | Genre/Category. |
+| `status` | ENUM | `AVAILABLE` / `BORROWED` | Book status. |
 
-#### Table: `book_loans` (Transaksi Pinjaman Buku)
-| Kolum | Jenis Data | Kekangan (Constraint) | Deskripsi |
+#### Table: `book_loans`
+| Column | Type | Constraint | Description |
 | :--- | :--- | :--- | :--- |
-| `id` | BIGINT | PK, Auto-Increment | ID transaksi pinjaman. |
-| `loan_reference`| VARCHAR(30) | Unique | Nombor rujukan pinjaman unik (cth: `LN-XXXXXXXX`). |
-| `student_id`| VARCHAR(20) | — | No. matrik peminjam. |
-| `student_name`| VARCHAR(100) | — | Nama penuh pelajar. |
-| `book_isbn` | VARCHAR(20) | — | ISBN buku yang dipinjam. |
-| `loan_date` | DATE | — | Tarikh buku dipinjam. |
-| `due_date` | DATE | — | Tarikh akhir pemulangan yang dibenarkan. |
-| `return_date`| DATE | Nullable | Tarikh sebenar buku dipulangkan. |
-| `status` | ENUM | `BORROWED` / `RETURNED` / `OVERDUE` | Status pinjaman. |
-| `fine_amount`| DECIMAL(8,2) | Default 0.00 | Amaun denda dikenakan (RM1/hari lewat). |
+| `id` | BIGINT | PK, Auto-Increment | Loan identifier. |
+| `loan_reference`| VARCHAR(30)| Unique | Unique loan reference (e.g. `LN-XXXXXXXX`). |
+| `student_id`| VARCHAR(20) | — | Student matric number. |
+| `student_name`| VARCHAR(100)| — | Student name. |
+| `book_isbn` | VARCHAR(20) | — | ISBN of the borrowed book. |
+| `loan_date` | DATE | — | Loan date. |
+| `due_date` | DATE | — | Due deadline date. |
+| `return_date`| DATE | Nullable | Actual returned date. |
+| `status` | ENUM | `BORROWED` / `RETURNED` / `OVERDUE` | Loan status. |
+| `fine_amount`| DECIMAL(8,2)| Default 0.00 | Fine amount (RM1/day overdue). |
 
-#### Table: `room_bookings` (Transaksi Tempahan Bilik)
-| Kolum | Jenis Data | Kekangan (Constraint) | Deskripsi |
+#### Table: `room_bookings`
+| Column | Type | Constraint | Description |
 | :--- | :--- | :--- | :--- |
-| `id` | BIGINT | PK, Auto-Increment | ID transaksi tempahan. |
-| `booking_reference`| VARCHAR(30) | Unique | Nombor rujukan tempahan unik (cth: `BK-XXXXXXXX`). |
-| `student_id`| VARCHAR(20) | — | No. matrik pelajar. |
-| `room_name` | VARCHAR(50) | Composite Unique (dengan slot & date) | Nama bilik tempahan. |
-| `slot` | VARCHAR(50) | Composite Unique | Slot masa tempahan (cth: `10:00-12:00`). |
-| `booking_date`| DATE | Composite Unique | Tarikh tempahan. |
-| `status` | ENUM | `CONFIRMED` / `CANCELLED` | Status tempahan bilik. |
+| `id` | BIGINT | PK, Auto-Increment | Booking identifier. |
+| `booking_reference`| VARCHAR(30)| Unique | Unique booking reference (e.g. `BK-XXXXXXXX`). |
+| `student_id`| VARCHAR(20) | — | Student matric number. |
+| `room_name` | VARCHAR(50) | Composite Unique (with slot & date) | Reserved room name. |
+| `slot` | VARCHAR(50) | Composite Unique | Reserved slot. |
+| `booking_date`| DATE | Composite Unique | Reserved date. |
+| `status` | ENUM | `CONFIRMED` / `CANCELLED` | Booking status. |
 
 ---
 
 ### 4. Database: `db_notification` (notification-service)
 
-#### Table: `notifications` (Log Notifikasi)
-| Kolum | Jenis Data | Kekangan (Constraint) | Deskripsi |
+#### Table: `notifications`
+| Column | Type | Constraint | Description |
 | :--- | :--- | :--- | :--- |
-| `id` | BIGINT | PK, Auto-Increment | ID notifikasi. |
-| `type` | VARCHAR(30) | — | Jenis notifikasi (cth: `ROOM_BOOKED`). |
-| `recipient_id`| VARCHAR(20) | — | ID penerima (no. matrik atau `ADMIN`). |
-| `recipient_name`| VARCHAR(100)| — | Nama penerima. |
-| `message` | VARCHAR(500) | — | Kandungan mesej notifikasi. |
-| `delivery_status`| VARCHAR(10) | — | Status penghantaran (`SENT` / `FAILED`). |
-| `channel` | VARCHAR(20) | — | Saluran penghantaran (`HTTP` / `TCP_SOCKET`). |
+| `id` | BIGINT | PK, Auto-Increment | Notification identifier. |
+| `type` | VARCHAR(30) | — | Notification event type. |
+| `recipient_id`| VARCHAR(20) | — | Target recipient matric number or `ADMIN`. |
+| `recipient_name`| VARCHAR(100)| — | Target recipient name. |
+| `message` | VARCHAR(500)| — | Alert content message. |
+| `delivery_status`| VARCHAR(10)| — | Status (`SENT` / `FAILED`). |
+| `channel` | VARCHAR(20) | — | Transport channel (`HTTP` / `TCP_SOCKET`). |
 
 ---
 
-## 🚀 Panduan Menjalankan Projek (Instruction Guide)
+## 🚀 Instruction Guide
 
-Ikuti langkah-langkah mudah di bawah mengikut komponen yang ingin dijalankan:
+Follow these steps to run the various components of the project:
 
-### Langkah 1: Jalankan Semua Microservices & Database (Docker)
+### Step 1: Running the Microservices backend (Docker)
 
-Pastikan perisian **Docker Desktop** telah dibuka dan aktif di komputer anda sebelum menaip arahan di bawah.
+Make sure **Docker Desktop** is open and running in the background.
 
-1. Buka Terminal/Command Prompt di folder utama projek (`SmartCampusConnect`).
-2. Jalankan arahan docker compose untuk membina dan melancarkan pangkalan data serta perkhidmatan microservices:
+1. Open your terminal in the root folder of the project (`SmartCampusConnect`).
+2. Run docker compose to compile and launch all microservices and databases:
    ```bash
    docker compose up --build -d
    ```
-3. Semak sama ada semua servis berjalan lancar dengan menaip:
+3. Check execution status:
    ```bash
    docker compose ps
    ```
 
 ---
 
-### Langkah 2: Jalankan Aplikasi Pelajar (Web Frontend)
+### Step 2: Running the Web Client (Vanilla JS)
 
-Web frontend ini menggunakan modul JavaScript ES6 asli, jadi ia perlu dihidupkan melalui pelayan web mini.
-
-*   **Pilihan A (Paling Mudah - Melalui Docker)**: Web sudah sedia dibuka secara automatik di alamat: [http://localhost:3000](http://localhost:3000).
-*   **Pilihan B (Guna Terminal Python)**:
-    1. Buka terminal di dalam folder `web`:
+*   **Option A (Using Docker)**: The Web Client is automatically served and exposed at: [http://localhost:3000](http://localhost:3000).
+*   **Option B (Python Local Web Server)**:
+    1. Open your terminal in the `web/` folder:
        ```bash
        cd web
        ```
-    2. Jalankan HTTP server ringkas:
+    2. Start the HTTP server:
        ```bash
        python3 -m http.server 3000
        ```
-    3. Buka pelayar web dan layari: [http://localhost:3000/view/index.html](http://localhost:3000/view/index.html).
+    3. Visit: [http://localhost:3000/view/index.html](http://localhost:3000/view/index.html).
 
 ---
 
-### Langkah 3: Jalankan Aplikasi Admin (Java Swing Desktop Client)
+### Step 3: Running the Desktop Admin Client (Java Swing)
 
-Aplikasi desktop Swing ini digunakan khusus untuk staf/admin menguruskan buku perpustakaan.
-
-1. Buka Terminal dan pergi ke folder `desktop`:
+1. Open your terminal in the `desktop/` folder:
    ```bash
    cd desktop
    ```
-2. Compile kod Java menggunakan skrip pembina macOS:
+2. Compile the Java files:
    ```bash
    ./compile.sh
    ```
-3. Jalankan aplikasi desktop:
+3. Run the desktop application:
    ```bash
    ./run.sh
    ```
 
 ---
 
-### Langkah 4: Jalankan Aplikasi Mobile (Flutter Client)
+### Step 4: Running the Mobile Client (Flutter)
 
-Aplikasi mudah alih Flutter ini boleh digunakan oleh pelajar dan juga pentadbir.
-
-1. Buka Terminal dan navigasi ke folder `mobile`:
+1. Open your terminal in the `mobile/` folder:
    ```bash
    cd mobile
    ```
-2. Muat turun semua dependensi Flutter yang diperlukan:
+2. Get Flutter packages:
    ```bash
    flutter pub get
    ```
-3. Sambungkan peranti fizikal atau emulator anda (Android/iOS) dan jalankan aplikasi:
+3. Connect your device/emulator and run the application:
    ```bash
    flutter run
    ```
 
 ---
 
-## 📸 Paparan Aplikasi (Application Screenshot)
-
-Berikut ialah paparan antara muka utama aplikasi pelajar:
-
-![Student Dashboard Panel](student_dashboard.png)
-
----
-
-## 📁 Struktur Direktori Projek (Folder Directory)
+## 📁 Project Directory Structure
 
 ```text
 SmartCampusConnect/
-├── .env                       # Tetapan port database dan service
-├── docker-compose.yml         # Konfigurasi container orkestrasi Docker
-├── backend/                   # ☕ student-service & REST API Gateway
+├── .env                       # Environment variables config
+├── docker-compose.yml         # Docker Compose orchestration
+├── backend/                   # ☕ student-service & REST Gateway
 ├── enrolment-service/         # ☕ enrolment-service (Port 8081)
 ├── booking-service/           # ☕ booking-service (Port 8082/8085)
 ├── notification-service/      # ☕ notification-service (Port 8083/9090)
-├── web/                       # 🌐 Web Frontend Client (HTML/JS SPA)
+├── web/                       # 🌐 Web Frontend Client
 ├── mobile/                    # 📱 Mobile Client (Flutter App)
-└── desktop/                   # 🖥️ Desktop Client (Java Swing Admin Client)
+└── desktop/                   # 🖥️ Desktop Client (Java Swing Admin Console)
 ```
