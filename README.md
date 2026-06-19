@@ -6,90 +6,192 @@ The system integrates three clients (**Web**, **Mobile**, and **Desktop**) commu
 
 ---
 
-## 🏗️ System Architecture (Sequence Diagram)
+## 🏗️ System Architecture (Sequence Diagrams)
 
-This sequence diagram illustrates the lifecycle of client requests, gateway routing, inter-service API orchestration, database transactions, and notification dispatching across boundaries:
+These detailed sequence diagrams trace the exact runtime execution flows, service boundaries, protocols, and database transactions across the microservices:
 
+### 1. Dashboard API Composition & Aggregation Flow (Port 8080)
 ```mermaid
 sequenceDiagram
     autonumber
     
-    box rgb(30, 41, 59) "CLIENT SIDE"
-        actor Student as :Student / Admin
+    actor User as :Student / Admin
+    box rgb(30, 41, 59) "CLIENT LAYER"
         participant Client as :Web / Mobile / Desktop Client
     end
 
-    box rgb(22, 78, 99) "GATEWAY LAYER"
-        participant Gateway as :Student Service / Gateway (:8080)
+    box rgb(22, 78, 99) "GATEWAY LAYER (Port 8080)"
+        participant Gateway as :Student Service (REST Gateway)
     end
 
     box rgb(17, 24, 39) "MICROSERVICES LAYER"
         participant Enrolment as :Enrolment Service (:8081)
-        participant Booking as :Booking Service (:8082 / :8085)
+        participant Booking as :Booking Service (:8082)
+        participant Notification as :Notification Service (:8083)
+    end
+
+    box rgb(63, 63, 70) "DATABASE LAYER"
+        participant DB as :db_student (MySQL)
+    end
+
+    User->>Client: Open Dashboard
+    activate Client
+    Client->>Gateway: GET /api/dashboard (X-Auth-Token: "token_uuid")
+    activate Gateway
+    
+    Gateway->>DB: Query user_sessions by token
+    activate DB
+    DB-->>Gateway: Return Session Profile (Role, userId, name)
+    deactivate DB
+
+    Note over Gateway: API Composition (Concurrent WebClient Requests)
+    
+    par Enrolments
+        Gateway->>Enrolment: GET /api/enrol/student/{id}
+        activate Enrolment
+        Enrolment-->>Gateway: Return course enrolment list
+        deactivate Enrolment
+    and Room Bookings
+        Gateway->>Booking: GET /api/bookings/student/{matric}
+        activate Booking
+        Booking-->>Gateway: Return room bookings list
+        deactivate Booking
+    and Book Loans
+        Gateway->>Booking: GET /api/loans/student/{matric}
+        activate Booking
+        Booking-->>Gateway: Return library loans list
+        deactivate Booking
+    and Notifications
+        Gateway->>Notification: GET /api/notifications/recipient/{matric}
+        activate Notification
+        Notification-->>Gateway: Return recipient alert logs
+        deactivate Notification
+    end
+
+    Note over Gateway: Aggregate lists into dashboard response JSON
+    Gateway-->>Client: HTTP 200 OK (Aggregated JSON)
+    deactivate Gateway
+    Client-->>User: Render Dashboard UI
+    deactivate Client
+```
+
+### 2. Fair-Locked Course Enrolment Flow (REST Proxy through Gateway)
+```mermaid
+sequenceDiagram
+    autonumber
+    
+    actor User as :Student
+    box rgb(30, 41, 59) "CLIENT LAYER"
+        participant Client as :Web / Mobile / Desktop Client
+    end
+
+    box rgb(22, 78, 99) "GATEWAY LAYER (Port 8080)"
+        participant Gateway as :Student Service (REST Gateway)
+    end
+
+    box rgb(17, 24, 39) "MICROSERVICES LAYER"
+        participant Enrolment as :Enrolment Service (:8081)
         participant Notification as :Notification Service (:8083)
     end
 
     box rgb(63, 63, 70) "DATABASE LAYER"
         participant DB_Student as :db_student (MySQL)
         participant DB_Enrolment as :db_enrolment (MySQL)
-        participant DB_Booking as :db_booking (MySQL)
-        participant DB_Notification as :db_notification (MySQL)
     end
 
-    %% Login flow
-    Student->>Client: 1. Input credentials (Matric / User ID)
+    User->>Client: Click "Enrol Course"
     activate Client
-    Client->>Gateway: POST /api/auth/login
-    activate Gateway
-    Gateway->>DB_Student: Query user profile & session
-    activate DB_Student
-    DB_Student-->>Gateway: Return profile & session token
-    deactivate DB_Student
-    Gateway-->>Client: HTTP 200 OK (Session Token)
-    deactivate Gateway
-    Client-->>Student: Render dashboard homepage
-    deactivate Client
-
-    %% Course Enrolment Flow
-    Student->>Client: 2. Request Course Enrolment
-    activate Client
-    Client->>Gateway: POST /api/enrol (logical gateway route)
+    Client->>Gateway: POST /api/enrol (body: studentId, courseCode)
     activate Gateway
     Gateway->>Enrolment: Forward POST /api/enrol (HTTP WebClient)
     activate Enrolment
     
-    %% Verify Student exists
-    Enrolment->>Gateway: GET /api/students/id/{id} (Verify Student)
+    %% Inter-service call to student-service
+    Enrolment->>Gateway: GET /api/students/id/{studentId} (Verify Student)
     activate Gateway
     Gateway->>DB_Student: Query student profile
     activate DB_Student
-    DB_Student-->>Gateway: Return student details
+    DB_Student-->>Gateway: Return Student details
     deactivate DB_Student
-    Gateway-->>Enrolment: HTTP 200 OK (Student details)
+    Gateway-->>Enrolment: HTTP 200 OK (id, studentId/matric, name)
     deactivate Gateway
 
-    %% Save Enrolment
-    Enrolment->>DB_Enrolment: Save enrolment (ReentrantLock protected)
+    %% Fair locking
+    Note over Enrolment: Enrolment Lock acquired (fair ReentrantLock)
+    Enrolment->>DB_Enrolment: Check Course capacity & Duplicate enrolment
+    activate DB_Enrolment
+    DB_Enrolment-->>Enrolment: Capacity OK & no active enrolment
+    deactivate DB_Enrolment
+
+    Enrolment->>DB_Enrolment: Save Enrolment Record & Increment course.currentCapacity
     activate DB_Enrolment
     DB_Enrolment-->>Enrolment: Success
     deactivate DB_Enrolment
+    Note over Enrolment: Enrolment Lock released
 
-    %% Trigger Notification
-    Enrolment->>Notification: POST /api/notify (Alert User)
+    %% Async notification
+    Enrolment->>Notification: POST /api/notify (Alert Enrolment Success)
     activate Notification
-    Notification->>DB_Notification: Save notification details
-    activate DB_Notification
-    DB_Notification-->>Notification: Success
-    deactivate DB_Notification
-    Notification-->>Enrolment: HTTP 200 OK (Notified)
+    Note over Notification: Async Fire-and-Forget (.subscribe())
+    Notification-->>Enrolment: HTTP 200 OK (Accepted)
+    deactivate Notification
+    
+    Enrolment-->>Gateway: HTTP 201 Created (Enrolment details)
+    deactivate Enrolment
+    Gateway-->>Client: HTTP 201 Created
+    deactivate Gateway
+    Client-->>User: Render "Enrolled Successfully"
+    deactivate Client
+```
+
+### 3. SOAP-Based Library & Booking Flows (Port 8085 JAX-WS)
+```mermaid
+sequenceDiagram
+    autonumber
+    
+    actor Admin as :Admin / Student
+    box rgb(30, 41, 59) "CLIENT LAYER"
+        participant Desktop as :Desktop / Mobile Client
+    end
+
+    box rgb(17, 24, 39) "MICROSERVICES LAYER"
+        participant Booking as :Booking Service (:8085 SOAP)
+        participant Gateway as :Student Service (:8080 REST)
+        participant Notification as :Notification Service (:8083)
+    end
+
+    box rgb(63, 63, 70) "DATABASE LAYER"
+        participant DB_Booking as :db_booking (MySQL)
+    end
+
+    Admin->>Desktop: Request Library Transaction (e.g., borrowBook)
+    activate Desktop
+    Desktop->>Booking: POST /ws/booking (SOAP Envelope with session token)
+    activate Booking
+    
+    %% Token Verification Call
+    Booking->>Gateway: GET /api/auth/me (Header: X-Auth-Token)
+    activate Gateway
+    Gateway-->>Booking: Return User Session Profile (Role = ADMIN)
+    deactivate Gateway
+
+    %% Transaction Logic
+    Note over Booking: Verify Admin role. Retrieve Book & check status.
+    Booking->>DB_Booking: Save BookLoan & Set Book status = BORROWED
+    activate DB_Booking
+    DB_Booking-->>Booking: Success
+    deactivate DB_Booking
+
+    %% Notification Dispatch
+    Booking->>Notification: POST /api/notify (Alert Book Borrowed)
+    activate Notification
+    Notification-->>Booking: HTTP 200 OK
     deactivate Notification
 
-    Enrolment-->>Gateway: HTTP 200 OK (Enrolled)
-    deactivate Enrolment
-    Gateway-->>Client: HTTP 200 OK (Enrolment details)
-    deactivate Gateway
-    Client-->>Student: Update UI (Show "Enrolled Successfully")
-    deactivate Client
+    Booking-->>Desktop: SOAP Response (XML: Loan Reference)
+    deactivate Booking
+    Desktop-->>Admin: Show Loan Details
+    deactivate Desktop
 ```
 
 ---
