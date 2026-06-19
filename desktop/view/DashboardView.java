@@ -1103,7 +1103,6 @@ public class DashboardView extends JFrame {
                     
                     // Fetch stats
                     String totalStudents = dash.get("totalStudents");
-                    String totalEnrolments = dash.get("totalEnrolments");
                     String totalRoomBookings = dash.get("totalRoomBookings");
                     String totalBookLoans = dash.get("totalBookLoans");
 
@@ -1121,6 +1120,22 @@ public class DashboardView extends JFrame {
                     // Fetch courses
                     String coursesJson = restService.getCourses(session.getToken());
                     List<Map<String, String>> coursesList = JsonParser.parseList(coursesJson);
+
+                    // Calculate total course enrolments from course capacities
+                    int totalEnrol = 0;
+                    if (coursesList != null) {
+                        for (Map<String, String> c : coursesList) {
+                            String capStr = c.get("currentCapacity");
+                            if (capStr != null) {
+                                try {
+                                    totalEnrol += Integer.parseInt(capStr);
+                                } catch (NumberFormatException e) {
+                                    // ignore
+                                }
+                            }
+                        }
+                    }
+                    String totalEnrolments = String.valueOf(totalEnrol);
 
                     SwingUtilities.invokeLater(() -> {
                         if (statStudentsVal != null) statStudentsVal.setText(totalStudents);

@@ -223,6 +223,12 @@ public class LibraryPanel extends JPanel {
         JScrollPane scroll = new JScrollPane(historyTable);
         panel.add(scroll, BorderLayout.CENTER);
 
+        JButton refreshHistoryBtn = new JButton(isAdmin ? "🔄 Refresh Global History Log" : "🔄 Refresh My Borrow History");
+        refreshHistoryBtn.setBackground(new Color(0x2A2A2A));
+        refreshHistoryBtn.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        refreshHistoryBtn.addActionListener(e -> refreshHistory(isAdmin));
+        panel.add(refreshHistoryBtn, BorderLayout.SOUTH);
+
         // Preload history
         SwingUtilities.invokeLater(() -> refreshHistory(isAdmin));
 
@@ -296,7 +302,8 @@ public class LibraryPanel extends JPanel {
                 // Let's write the active loans fetcher:
                 service.RestService restService = new service.RestService();
                 String dashboardJson = restService.getDashboardData(session.getToken());
-                List<java.util.Map<String, String>> allLoans = util.JsonParser.parseList(dashboardJson);
+                String loansJson = getNestedJsonList(dashboardJson, "allBookLoans");
+                List<java.util.Map<String, String>> allLoans = util.JsonParser.parseList(loansJson);
                 
                 SwingUtilities.invokeLater(() -> {
                     loansModel.setRowCount(0);
@@ -470,6 +477,7 @@ public class LibraryPanel extends JPanel {
                                 JOptionPane.showMessageDialog(button, "Book returned successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
                                 refreshCatalog("");
                                 refreshActiveLoans();
+                                refreshHistory(session.isAdmin());
                             });
                         } catch (Exception ex) {
                             SwingUtilities.invokeLater(() -> {
@@ -624,6 +632,7 @@ public class LibraryPanel extends JPanel {
                         JOptionPane.showMessageDialog(this, "Book successfully issued!\nLoan Reference: " + ref, "Success", JOptionPane.INFORMATION_MESSAGE);
                         refreshCatalog("");
                         refreshActiveLoans();
+                        refreshHistory(session.isAdmin());
                     });
                 } catch (Exception ex) {
                     SwingUtilities.invokeLater(() -> {
