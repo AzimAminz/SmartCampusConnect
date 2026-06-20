@@ -524,13 +524,23 @@ Make sure **Docker Desktop** is open and running in the background.
    cd desktop
    ```
 2. Compile the Java files:
-   ```bash
-   ./compile.sh
-   ```
+   * **macOS/Linux:**
+     ```bash
+     ./compile.sh
+     ```
+   * **Windows (Command Prompt / PowerShell):**
+     ```cmd
+     compile.bat
+     ```
 3. Run the desktop application:
-   ```bash
-   ./run.sh
-   ```
+   * **macOS/Linux:**
+     ```bash
+     ./run.sh
+     ```
+   * **Windows (Command Prompt / PowerShell):**
+     ```cmd
+     run.bat
+     ```
 
 ---
 
