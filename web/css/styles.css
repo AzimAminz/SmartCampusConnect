@@ -63,14 +63,27 @@ h1, h2, h3, .logo-text {
 .spinner {
     width: 50px;
     height: 50px;
-    border: 3px solid rgba(79, 70, 229, 0.1);
-    border-radius: 50%;
-    border-top-color: var(--primary);
-    animation: spin 1s ease-in-out infinite;
+    display: flex;
+    gap: 4px;
+    align-items: flex-end;
 }
 
-@keyframes spin {
-    to { transform: rotate(360deg); }
+.spinner span {
+    width: 8px;
+    background: var(--primary);
+    border-radius: 2px;
+    animation: bars 0.8s ease-in-out infinite;
+}
+
+.spinner span:nth-child(1) { height: 40%; animation-delay: 0s; }
+.spinner span:nth-child(2) { height: 70%; animation-delay: 0.1s; }
+.spinner span:nth-child(3) { height: 100%; animation-delay: 0.2s; }
+.spinner span:nth-child(4) { height: 70%; animation-delay: 0.3s; }
+.spinner span:nth-child(5) { height: 40%; animation-delay: 0.4s; }
+
+@keyframes bars {
+    0%, 100% { transform: scaleY(0.5); opacity: 0.6; }
+    50%       { transform: scaleY(1);   opacity: 1; }
 }
 
 /* Auth View Styles */
@@ -79,6 +92,127 @@ h1, h2, h3, .logo-text {
     max-width: 440px;
     padding: 2.5rem;
     margin: auto;
+}
+
+.login-shell {
+    width: 100%;
+    min-height: 100svh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+}
+
+.login-card {
+    width: 100%;
+    padding: 3rem 2.5rem;
+    max-width: 460px;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.login-hero {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 1rem;
+    text-align: center;
+}
+
+.login-icon {
+    font-size: 4rem;
+    line-height: 1;
+}
+
+.login-title {
+    font-size: 1.7rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0;
+    text-align: center;
+}
+
+.login-field {
+    margin-bottom: 1.5rem;
+}
+
+.login-label {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: 0.5rem;
+    display: block;
+}
+
+.login-input {
+    width: 100%;
+    text-transform: uppercase;
+}
+
+.login-error {
+    color: var(--danger);
+    font-size: 0.85rem;
+    margin-bottom: 1.5rem;
+    display: none;
+    padding: 0.75rem;
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+    border-radius: var(--radius-sm);
+    text-align: center;
+}
+
+.login-button {
+    width: 100%;
+    padding: 0.9rem;
+    font-size: 1rem;
+    border-radius: var(--radius-md);
+}
+
+.login-branding {
+    text-align: center;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    margin-bottom: 0;
+}
+
+.login-logo {
+    height: 80px;
+    width: auto;
+    margin-top: 0.5rem;
+}
+
+.login-demo {
+    margin-top: 0;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+    text-align: center;
+    color: var(--text-secondary);
+    font-size: 0.8rem;
+    line-height: 1.6;
+}
+
+.login-demo-title {
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+    color: rgba(255,255,255,0.7);
+}
+
+.login-code {
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
+.login-code-secondary {
+    color: var(--secondary);
+    background: rgba(6, 182, 212, 0.1);
+}
+
+.login-code-primary {
+    color: var(--primary);
+    background: rgba(79, 70, 229, 0.1);
 }
 
 /* Button & Form UI Elements */
@@ -153,4 +287,344 @@ h1, h2, h3, .logo-text {
 .dashboard-card:hover {
     transform: translateY(-4px);
     background-color: var(--surface-hover);
+}
+
+/* Profile view */
+.profile-card {
+    width: min(100%, 600px);
+    margin: 3rem auto;
+    padding: 2.5rem;
+}
+
+.profile-header {
+    margin-bottom: 2rem;
+}
+
+.profile-header h2 {
+    margin-bottom: 0.5rem;
+    font-size: 2rem;
+}
+
+.profile-header p {
+    color: var(--text-secondary);
+}
+
+.profile-fields {
+    display: flex;
+    flex-direction: column;
+    gap: 1.2rem;
+}
+
+.profile-input {
+    width: 100%;
+}
+
+/* Table styling for responsive design */
+#audit-results-container,
+#personal-history-container {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    display: block;
+}
+
+table {
+    width: 100%;
+}
+
+/* ===== RESPONSIVE MOBILE DESIGN ===== */
+
+/* Mobile & Small Devices (up to 640px) */
+@media (max-width: 640px) {
+    :root {
+        --radius-lg: 12px;
+        --radius-md: 8px;
+    }
+
+    .header-nav {
+        flex-direction: column;
+        gap: 1rem;
+        padding: 1rem 1rem;
+        align-items: flex-start;
+    }
+
+    .header-nav .logo {
+        width: 100%;
+    }
+
+    .header-nav > div:last-child {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        width: 100%;
+        gap: 1rem;
+    }
+
+    .header-nav > div:last-child > div:first-child {
+        text-align: left;
+    }
+
+    .header-nav > div:last-child > div:first-child > div:last-child {
+        justify-content: flex-start;
+    }
+
+    .auth-container {
+        padding: 1.5rem 1rem;
+    }
+
+    .login-shell {
+        padding: 0.75rem;
+    }
+
+    .login-card {
+        padding: 1.5rem 1.25rem;
+        gap: 1.25rem;
+        max-width: 100%;
+    }
+
+    .login-icon {
+        font-size: 3rem;
+    }
+
+    .login-title {
+        font-size: 1.4rem;
+    }
+
+    .login-logo {
+        height: 64px;
+    }
+
+    .login-demo {
+        font-size: 0.75rem;
+    }
+
+    .dashboard-grid {
+        grid-template-columns: 1fr;
+        padding: 1rem;
+        gap: 1rem;
+    }
+
+    .dash-container {
+        padding: 1rem;
+    }
+
+    .profile-card {
+        margin: 1rem auto;
+        padding: 1.25rem;
+    }
+
+    .profile-header {
+        margin-bottom: 1.5rem;
+    }
+
+    .profile-header h2 {
+        font-size: 1.5rem;
+    }
+
+    .profile-fields {
+        gap: 1rem;
+    }
+
+    /* Button & Form - Touch friendly sizes */
+    .btn-primary {
+        padding: 0.9rem 1.25rem;
+        font-size: 0.9rem;
+        min-height: 44px;
+    }
+
+    .form-control {
+        padding: 0.9rem 0.875rem;
+        font-size: 0.9rem;
+        min-height: 44px;
+    }
+
+    h1 {
+        font-size: 1.5rem !important;
+    }
+
+    h2 {
+        font-size: 1.25rem !important;
+    }
+
+    /* Tables - Responsive with horizontal scroll */
+    table {
+        font-size: 0.8rem;
+        min-width: 100%;
+    }
+
+    th, td {
+        padding: 0.75rem 0.5rem;
+        white-space: nowrap;
+    }
+
+    /* Table wrapper for scrolling on mobile */
+    #audit-results-container,
+    #personal-history-container {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        display: block;
+    }
+
+    /* Mobile-friendly tabs & nav */
+    .tab-btn {
+        padding: 0.65rem 1rem;
+        font-size: 0.85rem;
+        min-height: 40px;
+    }
+
+    .sub-tab-btn {
+        padding: 0.4rem 0.75rem;
+        font-size: 0.8rem;
+    }
+
+    .glass-panel {
+        border-radius: var(--radius-md);
+    }
+}
+
+/* Tablets & Medium Devices (640px - 1024px) */
+@media (min-width: 641px) and (max-width: 1024px) {
+    .dashboard-grid {
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        padding: 1.5rem;
+        gap: 1.25rem;
+    }
+
+    .dash-container {
+        padding: 1.5rem;
+    }
+
+    .header-nav {
+        padding: 1rem 1.5rem;
+    }
+
+    h1 {
+        font-size: 1.8rem !important;
+    }
+
+    table {
+        font-size: 0.875rem;
+    }
+
+    th, td {
+        padding: 0.875rem 0.75rem;
+    }
+
+    .btn-primary {
+        padding: 0.75rem 1.25rem;
+        font-size: 0.9rem;
+    }
+
+    .form-control {
+        padding: 0.75rem 0.875rem;
+        font-size: 0.9rem;
+    }
+}
+
+/* Large Devices (1024px+) */
+@media (min-width: 1025px) {
+    .dashboard-grid {
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        padding: 2rem;
+        gap: 1.5rem;
+    }
+}
+
+/* Library responsive fixes */
+@media (max-width: 768px) {
+    #audit-grid {
+        grid-template-columns: 1fr !important;
+        gap: 1.5rem !important;
+    }
+
+    #audit-grid > div[style*="border-right"] {
+        border-right: none !important;
+        border-bottom: 1px solid rgba(255,255,255,0.05);
+        padding-right: 0 !important;
+        padding-bottom: 1.5rem;
+    }
+
+    /* Book card grid - single column on mobile */
+    [style*="display: grid"][style*="grid-template-columns: repeat(auto-fill, minmax(280px"] {
+        grid-template-columns: 1fr !important;
+    }
+
+    /* Ensure tables scroll on mobile */
+    #audit-results-container,
+    #personal-history-container {
+        overflow-x: auto !important;
+        display: block !important;
+        width: 100%;
+    }
+
+    #audit-results-container table,
+    #personal-history-container table {
+        width: 100% !important;
+        min-width: 600px;
+    }
+
+    /* Glass panel containing tables should allow scrolling */
+    #lib-audit-view .glass-panel,
+    #lib-history-view .glass-panel {
+        overflow-x: auto;
+    }
+}
+
+@media (max-width: 480px) {
+    .header-nav {
+        flex-direction: column;
+        gap: 0.75rem;
+        padding: 0.75rem;
+    }
+
+    .dash-container {
+        padding: 0.75rem;
+    }
+
+    .profile-card {
+        margin: 0.75rem auto;
+        padding: 1rem;
+    }
+
+    .auth-container {
+        padding: 1rem;
+    }
+
+    .login-shell {
+        padding: 0.5rem;
+    }
+
+    .login-card {
+        padding: 1.25rem 1rem;
+    }
+
+    .login-title {
+        font-size: 1.25rem;
+    }
+
+    .login-logo {
+        height: 56px;
+    }
+
+    /* Extra small device table handling */
+    #audit-results-container,
+    #personal-history-container {
+        overflow-x: auto !important;
+        display: block !important;
+        width: 100%;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    #audit-results-container table,
+    #personal-history-container table {
+        width: 100% !important;
+        min-width: 700px;
+        table-layout: fixed;
+    }
+
+    #audit-results-container td,
+    #personal-history-container td {
+        word-wrap: break-word;
+        word-break: break-word;
+    }
 }

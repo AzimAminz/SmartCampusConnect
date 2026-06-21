@@ -3,28 +3,35 @@ import { AuthService } from "../services/auth.js";
 export const LoginView = {
   render() {
     return `
-      <div class="auth-container glass-panel" style="padding: 3rem 2.5rem; max-width: 460px; margin: auto; display: flex; flex-direction: column; gap: 1.5rem;">
-        <div style="display: flex; justify-content: center; align-items: center; gap: 10px; margin-bottom: 1rem;">
-        <img src="./omgosh-final.png" alt="Logo" style="height: 80px; width: auto;">
-      </div>
-        
-        <form id="login-form">
-          <div class="form-group" style="margin-bottom: 1.5rem;">
-            <label for="userId" style="font-size: 0.85rem; font-weight: 600; color: var(--text-secondary); margin-bottom: 0.5rem; display: block;">Matric No / Admin ID</label>
-            <input type="text" id="userId" class="form-control" placeholder="e.g., B032310001 or ADMIN" required style="width: 100%; text-transform: uppercase;">
+      <div class="login-shell">
+        <div class="auth-container glass-panel login-card">
+          <div class="login-hero">
+            <div class="login-icon">🏫</div>
+            <h2 class="login-title">SmartCampus Connect</h2>
+          </div>
+          
+          <form id="login-form">
+            <div class="form-group login-field">
+              <label for="userId" class="login-label">Matric No / Admin ID</label>
+              <input type="text" id="userId" class="form-control login-input" placeholder="e.g., B032310001 or ADMIN" required>
+            </div>
+
+            <div id="error-message" class="login-error"></div>
+            
+            <button type="submit" class="btn-primary login-button">
+              Sign In
+            </button>
+          </form>
+
+          <div class="login-branding">
+            <img src="./omgosh-final.png" alt="Logo" class="login-logo">
           </div>
 
-          <div id="error-message" style="color: var(--danger); font-size: 0.85rem; margin-bottom: 1.5rem; display: none; padding: 0.75rem; background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.2); border-radius: var(--radius-sm); text-align: center;"></div>
-          
-          <button type="submit" class="btn-primary" style="width: 100%; padding: 0.9rem; font-size: 1rem; border-radius: var(--radius-md);">
-            Sign In
-          </button>
-        </form>
-
-        <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid rgba(255, 255, 255, 0.05); text-align: center; color: var(--text-secondary); font-size: 0.8rem; line-height: 1.6;">
-          <p style="font-weight: 600; margin-bottom: 0.25rem; color: rgba(255,255,255,0.7);">Demo Accounts</p>
-          <p>Student: <code style="color: var(--secondary); background: rgba(6, 182, 212, 0.1); padding: 2px 6px; border-radius: 4px;">B032310001</code> to <code style="color: var(--secondary); background: rgba(6, 182, 212, 0.1); padding: 2px 6px; border-radius: 4px;">B032310005</code></p>
-          <p>Admin: <code style="color: var(--primary); background: rgba(79, 70, 229, 0.1); padding: 2px 6px; border-radius: 4px;">ADMIN</code></p>
+          <div class="login-demo">
+            <p class="login-demo-title">Demo Accounts</p>
+            <p>Student: <code class="login-code login-code-secondary">B032310001</code> to <code class="login-code login-code-secondary">B032310005</code></p>
+            <p>Admin: <code class="login-code login-code-primary">ADMIN</code></p>
+          </div>
         </div>
       </div>
     `;

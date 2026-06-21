@@ -151,7 +151,7 @@ export const DashboardView = {
 
       <div>
         <!-- Modern Header -->
-        <header class="header-nav glass-panel" style="border-radius: 0 0 var(--radius-lg) var(--radius-lg); margin-bottom: 2rem;">
+        <header class="header-nav glass-panel" style="border-radius: 0 0 var(--radius-lg) var(--radius-lg); margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
           <div class="logo" style="display: flex; align-items: center; gap: 0.75rem;">
             <div style="font-size: 1.75rem;">🏫</div>
             <div style="display: flex; flex-direction: column;">
@@ -159,10 +159,10 @@ export const DashboardView = {
               <span style="color: var(--secondary); font-size: 0.7rem; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;">Connect Portal</span>
             </div>
           </div>
-          <div style="display: flex; align-items: center; gap: 1.5rem;">
+          <div style="display: flex; align-items: center; gap: 1.5rem; flex-wrap: wrap;">
             <div style="text-align: right;">
               <div style="font-weight: 600; font-size: 0.95rem; color: var(--text-primary);">${user.fullName}</div>
-              <div style="font-size: 0.75rem; color: var(--text-secondary); display: flex; align-items: center; gap: 0.35rem; justify-content: flex-end;">
+              <div style="font-size: 0.75rem; color: var(--text-secondary); display: flex; align-items: center; gap: 0.35rem; justify-content: flex-end; flex-wrap: wrap;">
                 <span class="badge ${isAdmin ? 'badge-admin' : 'badge-student'}" style="padding: 1px 6px; font-size: 0.65rem;">${user.role}</span>
                 <span>• ${user.userId}</span>
               </div>
@@ -175,7 +175,7 @@ export const DashboardView = {
 
         <div class="dash-container">
           <!-- Main Tab Navigation -->
-          <div style="display: flex; gap: 0.75rem; margin-bottom: 2rem;">
+          <div style="display: flex; gap: 0.75rem; margin-bottom: 2rem; flex-wrap: wrap;">
             <button id="nav-overview-btn" class="tab-btn active">📊 General Overview</button>
             <button id="nav-library-btn" class="tab-btn">📚 Campus Library (SOAP)</button>
           </div>
@@ -259,8 +259,8 @@ export const DashboardView = {
 
             <!-- Library View 1: Search Books (All) -->
             <div id="lib-search-view" class="lib-sub-panel active" style="display: block;">
-              <div class="glass-panel" style="padding: 1.5rem; margin-bottom: 2rem; display: flex; gap: 1rem; align-items: center;">
-                <input type="text" id="catalog-search-input" class="form-control input-glow" placeholder="Search by ISBN, title, author, or category..." style="flex: 1; background: rgba(0,0,0,0.2);">
+              <div class="glass-panel" style="padding: 1.5rem; margin-bottom: 2rem; display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
+                <input type="text" id="catalog-search-input" class="form-control input-glow" placeholder="Search by ISBN, title, author, or category..." style="flex: 1; background: rgba(0,0,0,0.2); min-width: 200px;">
                 <button id="catalog-search-btn" class="btn-primary" style="padding: 0.8rem 2rem;">Search</button>
               </div>
 
@@ -344,14 +344,14 @@ export const DashboardView = {
               <div id="lib-audit-view" class="lib-sub-panel" style="display: none;">
                 <div class="glass-panel" style="padding: 2rem; margin-bottom: 2rem;">
                   <h3 style="margin-bottom: 1.5rem; font-family: 'Outfit';">Auditing Services Panel</h3>
-                  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; flex-wrap: wrap;">
+                  <div id="audit-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
                     <!-- Book History Search -->
                     <div style="border-right: 1px solid rgba(255,255,255,0.05); padding-right: 2rem;">
                       <h4 style="margin-bottom: 1rem; color: var(--secondary);">Query Book Loan History</h4>
                       <div class="form-group">
                         <label for="audit-book-isbn">Lookup Book ISBN</label>
-                        <div style="display: flex; gap: 0.5rem;">
-                          <input type="text" id="audit-book-isbn" class="form-control" placeholder="ISBN Code" style="flex: 1;">
+                        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                          <input type="text" id="audit-book-isbn" class="form-control" placeholder="ISBN Code" style="flex: 1; min-width: 150px;">
                           <button id="audit-book-btn" class="btn-primary" style="padding: 0.5rem 1.25rem;">Audit</button>
                         </div>
                       </div>
@@ -362,8 +362,8 @@ export const DashboardView = {
                       <h4 style="margin-bottom: 1rem; color: var(--secondary);">Query Student Loan History</h4>
                       <div class="form-group">
                         <label for="audit-student-id">Lookup Student Matric ID</label>
-                        <div style="display: flex; gap: 0.5rem;">
-                          <input type="text" id="audit-student-id" class="form-control" placeholder="Matric ID" style="flex: 1;">
+                        <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                          <input type="text" id="audit-student-id" class="form-control" placeholder="Matric ID" style="flex: 1; min-width: 150px;">
                           <button id="audit-student-btn" class="btn-primary" style="padding: 0.5rem 1.25rem;">Audit</button>
                         </div>
                       </div>
