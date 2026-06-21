@@ -1,7 +1,7 @@
 smartcampus/notification/model/Notification$DeliveryStatus.class
 smartcampus/notification/controller/NotificationController.class
 smartcampus/notification/model/Notification.class
-smartcampus/notification/repository/NotificationRepository.class
 smartcampus/notification/model/Notification$NotificationType.class
+smartcampus/notification/repository/NotificationRepository.class
 smartcampus/notification/NotificationServiceApp.class
 smartcampus/notification/service/NotificationTcpServer.class

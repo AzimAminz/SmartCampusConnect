@@ -16,6 +16,6 @@ smartcampus/booking/repository/BookRepository.class
 smartcampus/booking/service/AuthClient.class
 smartcampus/booking/model/BookLoan.class
 smartcampus/booking/model/Book$BookStatus.class
-smartcampus/booking/repository/BookLoanRepository.class
 smartcampus/booking/model/UserSession.class
+smartcampus/booking/repository/BookLoanRepository.class
 smartcampus/booking/service/NotificationClient.class
