@@ -505,15 +505,15 @@ Make sure **Docker Desktop** is open and running in the background.
 
 *   **Option A (Using Docker)**: The Web Client is automatically served and exposed at: [http://localhost:3000](http://localhost:3000).
 *   **Option B (Python Local Web Server)**:
-    1. Open your terminal in the `web/` folder:
-       ```bash
-       cd web
-       ```
-    2. Start the HTTP server:
-       ```bash
-       python3 -m http.server 3000
-       ```
-    3. Visit: [http://localhost:3000/view/index.html](http://localhost:3000/view/index.html).
+     1. Open your terminal in the `web/` folder:
+         ```bash
+         cd web
+         ```
+     2. Start the HTTP server:
+         ```bash
+         python3 -m http.server 3000
+         ```
+     3. Visit: [http://localhost:3000/index.html](http://localhost:3000/index.html).
 
 ---
 
