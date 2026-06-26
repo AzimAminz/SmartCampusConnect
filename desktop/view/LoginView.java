@@ -153,6 +153,18 @@ public class LoginView {
         footerPanel.add(footerText2);
         footerPanel.add(footerText3);
 
+        footerPanel.add(Box.createVerticalStrut(15));
+        try {
+            ImageIcon icon = new ImageIcon("omgosh-final.png");
+            Image img = icon.getImage();
+            Image scaledImg = img.getScaledInstance(144, 50, Image.SCALE_SMOOTH);
+            JLabel orgLogo = new JLabel(new ImageIcon(scaledImg));
+            orgLogo.setAlignmentX(Component.CENTER_ALIGNMENT);
+            footerPanel.add(orgLogo);
+        } catch (Exception ex) {
+            // silent catch
+        }
+
         // ---------------------------------------------------
         // Add elements inside Main Panel
         // ---------------------------------------------------
