@@ -123,6 +123,38 @@ public class DashboardView extends JFrame {
 
         rootPanel.add(mainTabs, BorderLayout.CENTER);
 
+        // Instant refresh on tab selection
+        mainTabs.addChangeListener(e -> {
+            int index = mainTabs.getSelectedIndex();
+            if (index == -1) return;
+            String title = mainTabs.getTitleAt(index);
+            if (title.contains("Dashboard") || title.contains("Hub") || title.contains("Accounts") || title.contains("Course")) {
+                refreshData();
+            } else {
+                Component comp = mainTabs.getComponentAt(index);
+                if (comp instanceof RoomBookingPanel) {
+                    ((RoomBookingPanel) comp).refreshBookings();
+                } else if (comp instanceof LibraryPanel) {
+                    ((LibraryPanel) comp).refreshAll();
+                }
+            }
+        });
+
+        // 30-Second Auto-Refresh Timer in background
+        javax.swing.Timer autoRefreshTimer = new javax.swing.Timer(30000, e -> {
+            refreshData();
+            int index = mainTabs.getSelectedIndex();
+            if (index != -1) {
+                Component comp = mainTabs.getComponentAt(index);
+                if (comp instanceof RoomBookingPanel) {
+                    ((RoomBookingPanel) comp).refreshBookings();
+                } else if (comp instanceof LibraryPanel) {
+                    ((LibraryPanel) comp).refreshAll();
+                }
+            }
+        });
+        autoRefreshTimer.start();
+
         // Preload stats / info
         refreshData();
     }
@@ -491,6 +523,13 @@ public class DashboardView extends JFrame {
         });
         actions.add(dropBtn);
 
+        JButton refreshBtn = new JButton("🔄 Refresh Courses");
+        refreshBtn.setBackground(new Color(0x2A2A2A));
+        refreshBtn.setForeground(Color.WHITE);
+        refreshBtn.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        refreshBtn.addActionListener(e -> refreshData());
+        actions.add(refreshBtn);
+
         panel.add(actions, BorderLayout.SOUTH);
 
         return panel;
@@ -648,6 +687,13 @@ public class DashboardView extends JFrame {
         });
 
         panel.add(new JScrollPane(studentsTable), BorderLayout.CENTER);
+
+        JButton refreshBtn = new JButton("🔄 Refresh Student Directory");
+        refreshBtn.setBackground(new Color(0x2A2A2A));
+        refreshBtn.setForeground(Color.WHITE);
+        refreshBtn.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        refreshBtn.addActionListener(e -> refreshData());
+        panel.add(refreshBtn, BorderLayout.SOUTH);
 
         return panel;
     }
@@ -951,6 +997,13 @@ public class DashboardView extends JFrame {
         });
 
         panel.add(new JScrollPane(coursesTable), BorderLayout.CENTER);
+
+        JButton refreshBtn = new JButton("🔄 Refresh Course Directory");
+        refreshBtn.setBackground(new Color(0x2A2A2A));
+        refreshBtn.setForeground(Color.WHITE);
+        refreshBtn.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        refreshBtn.addActionListener(e -> refreshData());
+        panel.add(refreshBtn, BorderLayout.SOUTH);
 
         return panel;
     }

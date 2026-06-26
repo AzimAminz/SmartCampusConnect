@@ -500,7 +500,7 @@ public class RoomBookingPanel extends JPanel {
         }).start();
     }
 
-    private void refreshBookings() {
+    public void refreshBookings() {
         new Thread(() -> {
             try {
                 String dashboardJson = restService.getDashboardData(session.getToken());

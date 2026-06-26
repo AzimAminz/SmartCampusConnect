@@ -497,6 +497,14 @@ public class LibraryPanel extends JPanel {
         }
     }
 
+    public void refreshAll() {
+        refreshCatalog(searchField != null ? searchField.getText().trim() : "");
+        if (session.isAdmin()) {
+            refreshActiveLoans();
+        }
+        refreshHistory(session.isAdmin());
+    }
+
     private String getNestedJson(String raw, String key) {
         int index = raw.indexOf("\"" + key + "\"");
         if (index == -1) return "";
