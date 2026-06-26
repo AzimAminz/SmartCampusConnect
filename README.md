@@ -515,6 +515,15 @@ Make sure **Docker Desktop** is open and running in the background.
          ```
      3. Visit: [http://localhost:3000/index.html](http://localhost:3000/index.html).
 
+**Note:** The Web Client looks for a project logo at `web/omgosh-logo.png`. To display your logo in the dashboard, place a PNG named `omgosh-logo.png` in the `web/` folder or update the path in `web/js/views/dashboard.js`.
+
+### Web changelog (recent)
+
+- Updated web UI: mobile-responsive layout for dashboard, library, login, and profile.
+- Restored visible circular spinner and improved loader behavior.
+- Added support for `omgosh-logo.png` in the dashboard header (place the file in `web/`).
+- Corrected web run instructions and added notes for local serving.
+
 ---
 
 ### Step 3: Running the Desktop Admin Client (Java Swing)

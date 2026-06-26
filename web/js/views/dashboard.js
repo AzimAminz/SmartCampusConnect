@@ -2,6 +2,129 @@ import { SessionManager } from '../utils/session.js';
 import { AuthService } from '../services/auth.js';
 import { LibraryService } from '../services/libraryService.js';
 
+function getLoanBadgeClass(status) {
+  if (status === 'RETURNED') return 'badge-available';
+  if (status === 'OVERDUE') return 'badge-borrowed';
+  return 'badge-student';
+}
+
+function renderLoansTable(loans, container) {
+  if (loans.length === 0) {
+    container.innerHTML = `
+      <div style="text-align: center; padding: 3rem; color: var(--text-secondary);">
+        <div style="font-size: 2.5rem; margin-bottom: 1rem;">📖</div>
+        <p>No book loans registered under this Matric account.</p>
+      </div>
+    `;
+    return;
+  }
+
+  let tableHtml = `
+    <table>
+      <thead>
+        <tr>
+          <th>Reference</th>
+          <th>Book Details</th>
+          <th>Issued On</th>
+          <th>Due Deadline</th>
+          <th>Returned On</th>
+          <th>Status</th>
+          <th>Fine</th>
+        </tr>
+      </thead>
+      <tbody>
+  `;
+
+  loans.forEach(loan => {
+    const fineColor = loan.fineAmount > 0 ? 'var(--danger)' : 'var(--text-secondary)';
+    const badgeClass = getLoanBadgeClass(loan.status);
+
+    tableHtml += `
+      <tr>
+        <td style="font-family: monospace; font-weight: 700; color: var(--secondary);">${loan.loanReference}</td>
+        <td>
+          <div style="font-weight: 600; color: white;">${loan.bookTitle || 'Unknown Title'}</div>
+          <div style="font-size: 0.75rem; color: var(--text-secondary); font-family: monospace;">ISBN: ${loan.bookIsbn}</div>
+        </td>
+        <td>${loan.loanDate}</td>
+        <td>${loan.dueDate}</td>
+        <td>${loan.returnDate || '<span style="color: var(--text-secondary); font-style: italic;">Active Loan</span>'}</td>
+        <td>
+          <span class="badge ${badgeClass}">
+            ${loan.status}
+          </span>
+        </td>
+        <td style="font-weight: 600; color: ${fineColor};">RM ${loan.fineAmount.toFixed(2)}</td>
+      </tr>
+    `;
+  });
+
+  tableHtml += `
+      </tbody>
+    </table>
+  `;
+  container.innerHTML = tableHtml;
+}
+
+function renderAuditTable(loans, container, emptyMessage) {
+  if (loans.length === 0) {
+    container.innerHTML = `<p style="text-align: center; color: var(--text-secondary); padding: 2rem 0;">${emptyMessage}</p>`;
+    return;
+  }
+
+  let tableHtml = `
+    <table>
+      <thead>
+        <tr>
+          <th>Reference</th>
+          <th>Student</th>
+          <th>ISBN & Title</th>
+          <th>Dates</th>
+          <th>Status</th>
+          <th>Fine</th>
+        </tr>
+      </thead>
+      <tbody>
+  `;
+
+  loans.forEach(loan => {
+    const badgeClass = getLoanBadgeClass(loan.status);
+
+    tableHtml += `
+      <tr>
+        <td style="font-family: monospace; font-weight: 700; color: var(--secondary);">${loan.loanReference}</td>
+        <td>
+          <div style="font-weight: 600; color: white;">${loan.studentName || 'Student Name'}</div>
+          <div style="font-size: 0.75rem; color: var(--text-secondary); font-family: monospace;">Matric: ${loan.studentId}</div>
+        </td>
+        <td>
+          <div style="font-weight: 600; color: white;">${loan.bookTitle || 'Unknown Book'}</div>
+          <div style="font-size: 0.75rem; color: var(--text-secondary); font-family: monospace;">ISBN: ${loan.bookIsbn}</div>
+        </td>
+        <td style="font-size: 0.85rem; line-height: 1.4;">
+          <div>📅 Issued: ${loan.loanDate}</div>
+          <div>⏳ Due: ${loan.dueDate}</div>
+          ${loan.returnDate ? `<div>✅ Returned: ${loan.returnDate}</div>` : `<div style="color: var(--secondary); font-style: italic;">Active</div>`}
+        </td>
+        <td>
+          <span class="badge ${badgeClass}">
+            ${loan.status}
+          </span>
+        </td>
+        <td style="font-weight: 700; color: ${loan.fineAmount > 0 ? 'var(--danger)' : 'var(--text-secondary)'};">
+          RM ${loan.fineAmount.toFixed(2)}
+        </td>
+      </tr>
+    `;
+  });
+
+  tableHtml += `
+      </tbody>
+    </table>
+  `;
+  container.innerHTML = tableHtml;
+}
+
 export const DashboardView = {
   render() {
     const user = SessionManager.getCurrentUser() || { fullName: 'Guest User', userId: 'N/A', role: 'STUDENT' };
@@ -147,22 +270,84 @@ export const DashboardView = {
           border-color: var(--secondary);
           box-shadow: 0 0 10px rgba(6, 182, 212, 0.2);
         }
+        .dashboard-brand {
+          display: flex;
+          align-items: center;
+          gap: 0.75rem;
+          min-width: 0;
+        }
+        .dashboard-brand-logo {
+          width: 40px;
+          height: 40px;
+          object-fit: contain;
+          flex-shrink: 0;
+        }
+        .dashboard-brand-text {
+          display: flex;
+          flex-direction: column;
+          min-width: 0;
+        }
+        .dashboard-brand-title {
+          font-size: 1.25rem;
+          letter-spacing: -0.5px;
+          line-height: 1.1;
+          background: linear-gradient(135deg, #fff, #9ca3af);
+          -webkit-background-clip: text;
+          -webkit-text-fill-color: transparent;
+        }
+        .dashboard-brand-subtitle {
+          color: var(--secondary);
+          font-size: 0.7rem;
+          font-weight: 700;
+          letter-spacing: 1px;
+          text-transform: uppercase;
+        }
+        .dashboard-user-area {
+          display: flex;
+          align-items: center;
+          gap: 1.5rem;
+          flex-wrap: wrap;
+        }
+        @media (max-width: 640px) {
+          .header-nav {
+            align-items: flex-start;
+          }
+          .dashboard-brand {
+            gap: 0.5rem;
+          }
+          .dashboard-brand-logo {
+            width: 30px;
+            height: 30px;
+          }
+          .dashboard-brand-title {
+            font-size: 1rem;
+          }
+          .dashboard-brand-subtitle {
+            font-size: 0.62rem;
+            letter-spacing: 0.8px;
+          }
+          .dashboard-user-area {
+            width: 100%;
+            justify-content: space-between;
+            gap: 0.75rem;
+          }
+        }
       </style>
 
       <div>
         <!-- Modern Header -->
-        <header class="header-nav glass-panel" style="border-radius: 0 0 var(--radius-lg) var(--radius-lg); margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
-          <div class="logo" style="display: flex; align-items: center; gap: 0.75rem;">
-            <div style="font-size: 1.75rem;">🏫</div>
-            <div style="display: flex; flex-direction: column;">
-              <span class="logo-text" style="font-size: 1.25rem; letter-spacing: -0.5px; line-height: 1.1; background: linear-gradient(135deg, #fff, #9ca3af); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">SmartCampus</span>
-              <span style="color: var(--secondary); font-size: 0.7rem; font-weight: 700; letter-spacing: 1px; text-transform: uppercase;">Connect Portal</span>
+        <header class="header-nav glass-panel" style="border-radius: 0 0 var(--radius-lg) var(--radius-lg); margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem;">
+          <div class="dashboard-brand">
+            <img src="./omgosh-logo.png" alt="OMgosh logo" class="dashboard-brand-logo">
+            <div class="dashboard-brand-text">
+              <span class="logo-text dashboard-brand-title">SmartCampus</span>
+              <span class="dashboard-brand-subtitle">Connect Portal</span>
             </div>
           </div>
-          <div style="display: flex; align-items: center; gap: 1.5rem; flex-wrap: wrap;">
+          <div class="dashboard-user-area">
             <div style="text-align: right;">
               <div style="font-weight: 600; font-size: 0.95rem; color: var(--text-primary);">${user.fullName}</div>
-              <div style="font-size: 0.75rem; color: var(--text-secondary); display: flex; align-items: center; gap: 0.35rem; justify-content: flex-end; flex-wrap: wrap;">
+              <div style="font-size: 0.75rem; color: var(--text-secondary); display: flex; align-items: center; gap: 0.35rem; justify-content: flex-end;">
                 <span class="badge ${isAdmin ? 'badge-admin' : 'badge-student'}" style="padding: 1px 6px; font-size: 0.65rem;">${user.role}</span>
                 <span>• ${user.userId}</span>
               </div>
@@ -544,65 +729,6 @@ export const DashboardView = {
       }
     }
 
-    function renderLoansTable(loans, container) {
-      if (loans.length === 0) {
-        container.innerHTML = `
-          <div style="text-align: center; padding: 3rem; color: var(--text-secondary);">
-            <div style="font-size: 2.5rem; margin-bottom: 1rem;">📖</div>
-            <p>No book loans registered under this Matric account.</p>
-          </div>
-        `;
-        return;
-      }
-
-      let tableHtml = `
-        <table>
-          <thead>
-            <tr>
-              <th>Reference</th>
-              <th>Book Details</th>
-              <th>Issued On</th>
-              <th>Due Deadline</th>
-              <th>Returned On</th>
-              <th>Status</th>
-              <th>Fine</th>
-            </tr>
-          </thead>
-          <tbody>
-      `;
-
-      loans.forEach(loan => {
-        const isOverdue = loan.status === 'OVERDUE';
-        const isReturned = loan.status === 'RETURNED';
-        const fineColor = loan.fineAmount > 0 ? 'var(--danger)' : 'var(--text-secondary)';
-        
-        tableHtml += `
-          <tr>
-            <td style="font-family: monospace; font-weight: 700; color: var(--secondary);">${loan.loanReference}</td>
-            <td>
-              <div style="font-weight: 600; color: white;">${loan.bookTitle || 'Unknown Title'}</div>
-              <div style="font-size: 0.75rem; color: var(--text-secondary); font-family: monospace;">ISBN: ${loan.bookIsbn}</div>
-            </td>
-            <td>${loan.loanDate}</td>
-            <td>${loan.dueDate}</td>
-            <td>${loan.returnDate || '<span style="color: var(--text-secondary); font-style: italic;">Active Loan</span>'}</td>
-            <td>
-              <span class="badge ${isReturned ? 'badge-available' : (isOverdue ? 'badge-borrowed' : 'badge-student')}">
-                ${loan.status}
-              </span>
-            </td>
-            <td style="font-weight: 600; color: ${fineColor};">RM ${loan.fineAmount.toFixed(2)}</td>
-          </tr>
-        `;
-      });
-
-      tableHtml += `
-          </tbody>
-        </table>
-      `;
-      container.innerHTML = tableHtml;
-    }
-
     // ---- Admin Only Features ----
     if (isAdmin) {
       // Operation: Add Book Form
@@ -728,66 +854,6 @@ export const DashboardView = {
         } catch (err) {
           auditResultsContainer.innerHTML = `<p style="color:var(--danger); padding:1rem; text-align:center;">Audit failed: ${err.message}</p>`;
         }
-      }
-
-      function renderAuditTable(loans, container, emptyMessage) {
-        if (loans.length === 0) {
-          container.innerHTML = `<p style="text-align: center; color: var(--text-secondary); padding: 2rem 0;">${emptyMessage}</p>`;
-          return;
-        }
-
-        let tableHtml = `
-          <table>
-            <thead>
-              <tr>
-                <th>Reference</th>
-                <th>Student</th>
-                <th>ISBN & Title</th>
-                <th>Dates</th>
-                <th>Status</th>
-                <th>Fine</th>
-              </tr>
-            </thead>
-            <tbody>
-        `;
-
-        loans.forEach(loan => {
-          const isOverdue = loan.status === 'OVERDUE';
-          const isReturned = loan.status === 'RETURNED';
-          
-          tableHtml += `
-            <tr>
-              <td style="font-family: monospace; font-weight: 700; color: var(--secondary);">${loan.loanReference}</td>
-              <td>
-                <div style="font-weight: 600; color: white;">${loan.studentName || 'Student Name'}</div>
-                <div style="font-size: 0.75rem; color: var(--text-secondary); font-family: monospace;">Matric: ${loan.studentId}</div>
-              </td>
-              <td>
-                <div style="font-weight: 600; color: white;">${loan.bookTitle || 'Unknown Book'}</div>
-                <div style="font-size: 0.75rem; color: var(--text-secondary); font-family: monospace;">ISBN: ${loan.bookIsbn}</div>
-              </td>
-              <td style="font-size: 0.85rem; line-height: 1.4;">
-                <div>📅 Issued: ${loan.loanDate}</div>
-                <div>⏳ Due: ${loan.dueDate}</div>
-                ${loan.returnDate ? `<div>✅ Returned: ${loan.returnDate}</div>` : `<div style="color: var(--secondary); font-style: italic;">Active</div>`}
-              </td>
-              <td>
-                <span class="badge ${isReturned ? 'badge-available' : (isOverdue ? 'badge-borrowed' : 'badge-student')}">
-                  ${loan.status}
-                </span>
-              </td>
-              <td style="font-weight: 700; color: ${loan.fineAmount > 0 ? 'var(--danger)' : 'var(--text-secondary)'};">
-                RM ${loan.fineAmount.toFixed(2)}
-              </td>
-            </tr>
-          `;
-        });
-
-        tableHtml += `
-            </tbody>
-          </table>
-        `;
-        container.innerHTML = tableHtml;
       }
 
       auditBookBtn.addEventListener('click', runBookAudit);
