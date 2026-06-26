@@ -13,7 +13,6 @@ class AddStudentDialog extends StatefulWidget {
 class _AddStudentDialogState extends State<AddStudentDialog> {
   final _formKey = GlobalKey<FormState>();
   final _nameCtrl = TextEditingController();
-  final _emailCtrl = TextEditingController();
   final _progNameCtrl = TextEditingController();
   final _semCtrl = TextEditingController(text: '1');
   final _gpaCtrl = TextEditingController(text: '0.00');
@@ -41,7 +40,6 @@ class _AddStudentDialogState extends State<AddStudentDialog> {
   @override
   void dispose() {
     _nameCtrl.dispose();
-    _emailCtrl.dispose();
     _progNameCtrl.dispose();
     _semCtrl.dispose();
     _gpaCtrl.dispose();
@@ -184,7 +182,6 @@ class _AddStudentDialogState extends State<AddStudentDialog> {
                 const SizedBox(height: 8),
 
                 _buildDialogField(_nameCtrl, 'Full Name', Icons.person_outline_rounded, required: true),
-                _buildDialogField(_emailCtrl, 'Email Address', Icons.email_outlined, required: true),
                 _buildDialogField(_progNameCtrl, 'Programme Name (e.g. Bachelor of CS)', Icons.school_outlined),
                 _buildDialogField(_semCtrl, 'Current Semester  ← used in ID', Icons.calendar_today_outlined, isNumber: true),
                 _buildDialogField(_gpaCtrl, 'GPA (0.00 – 4.00)', Icons.grade_outlined, isDecimal: true),
@@ -223,7 +220,7 @@ class _AddStudentDialogState extends State<AddStudentDialog> {
 
                   final body = {
                     'name': _nameCtrl.text.trim(),
-                    'email': _emailCtrl.text.trim(),
+                    'email': 'auto',
                     'programmeCode': _programmeCodes[_selectedProgrammeType]!,
                     'faculty': _selectedFaculty,
                     'semester': _semCtrl.text.trim().isEmpty ? '1' : _semCtrl.text.trim(),
@@ -480,7 +477,7 @@ class _EditStudentDialogState extends State<EditStudentDialog> {
                 ),
                 const SizedBox(height: 12),
                 _buildDialogField(_nameCtrl, 'Full Name', Icons.person_outline_rounded, required: true),
-                _buildDialogField(_emailCtrl, 'Email Address', Icons.email_outlined, required: true),
+                _buildDialogField(_emailCtrl, 'Email Address', Icons.email_outlined, required: true, readOnly: true),
                 _buildDialogField(_progCtrl, 'Programme Name', Icons.school_outlined),
                 _buildDialogField(_semCtrl, 'Semester', Icons.calendar_today_outlined, isNumber: true),
                 _buildDialogField(_gpaCtrl, 'GPA (0.00 - 4.00)', Icons.grade_outlined, isDecimal: true),
@@ -590,12 +587,14 @@ class _EditStudentDialogState extends State<EditStudentDialog> {
     bool required = false,
     bool isNumber = false,
     bool isDecimal = false,
+    bool readOnly = false,
   }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: TextFormField(
         controller: ctrl,
-        style: const TextStyle(color: Colors.white),
+        readOnly: readOnly,
+        style: TextStyle(color: readOnly ? Colors.white54 : Colors.white),
         keyboardType: isDecimal
             ? const TextInputType.numberWithOptions(decimal: true)
             : isNumber
@@ -604,12 +603,16 @@ class _EditStudentDialogState extends State<EditStudentDialog> {
         decoration: InputDecoration(
           labelText: required ? '$label *' : label,
           labelStyle: TextStyle(
-            color: required ? Colors.white70 : Colors.white54,
+            color: readOnly
+                ? Colors.white30
+                : required
+                    ? Colors.white70
+                    : Colors.white54,
             fontSize: 13,
           ),
-          prefixIcon: Icon(icon, color: Colors.white38, size: 18),
+          prefixIcon: Icon(icon, color: readOnly ? Colors.white24 : Colors.white38, size: 18),
           filled: true,
-          fillColor: Colors.white.withOpacity(0.04),
+          fillColor: readOnly ? Colors.white.withOpacity(0.02) : Colors.white.withOpacity(0.04),
           contentPadding: const EdgeInsets.symmetric(
             horizontal: 12,
             vertical: 10,
@@ -624,10 +627,13 @@ class _EditStudentDialogState extends State<EditStudentDialog> {
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(8),
-            borderSide: const BorderSide(color: Color(0xFF00BFA5), width: 1.2),
+            borderSide: BorderSide(
+              color: readOnly ? Colors.white10 : const Color(0xFF00BFA5),
+              width: readOnly ? 1.0 : 1.2,
+            ),
           ),
         ),
-        validator: (v) => required && (v == null || v.trim().isEmpty) ? 'Field is required' : null,
+        validator: (v) => required && !readOnly && (v == null || v.trim().isEmpty) ? 'Field is required' : null,
       ),
     );
   }
