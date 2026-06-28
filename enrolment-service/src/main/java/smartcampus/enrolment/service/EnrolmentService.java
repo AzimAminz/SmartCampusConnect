@@ -1,13 +1,5 @@
 package smartcampus.enrolment.service;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import smartcampus.enrolment.model.Course;
-import smartcampus.enrolment.model.Enrolment;
-import smartcampus.enrolment.repository.CourseRepository;
-import smartcampus.enrolment.repository.EnrolmentRepository;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -16,6 +8,15 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import smartcampus.enrolment.model.Course;
+import smartcampus.enrolment.model.Enrolment;
+import smartcampus.enrolment.repository.CourseRepository;
+import smartcampus.enrolment.repository.EnrolmentRepository;
 
 /**
  * Enrolment Service — satisfies:
